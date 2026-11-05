@@ -1,9 +1,9 @@
 // All copy here is placeholder (lorem ipsum). Replace it with real content.
 
 export const site = {
-  name: "Your Name",
-  shortName: "YN",
-  role: "Creative Developer",
+  name: "Abdul Wahab",
+  shortName: "AW",
+  role: "Web Developer",
   tagline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
   description:
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",

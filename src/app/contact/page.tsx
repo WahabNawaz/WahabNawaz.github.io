@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import CopyEmail from "@/components/CopyEmail";
+import BouncyLetters from "@/components/BouncyLetters";
 import { Label } from "@/components/ui";
 import { lorem, site } from "@/content/site";
 
@@ -14,9 +15,10 @@ export default function ContactPage() {
     <section className="flex min-h-svh flex-col justify-between px-5 pb-10 pt-32 md:px-8">
       <div>
         <Label>{site.status}</Label>
-        <h1 className="mt-4 text-center font-display text-[22vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[17vw]">
-          Say hi
-        </h1>
+        <BouncyLetters
+          text="Say hi"
+          className="mt-4 text-center font-display text-[22vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[17vw]"
+        />
       </div>
 
       <div className="mt-[40vh] grid gap-10 md:mt-0 md:grid-cols-2 md:items-end">

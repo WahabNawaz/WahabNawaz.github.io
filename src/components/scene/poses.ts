@@ -20,7 +20,7 @@ export const NAMED: Record<string, Pose> = {
 };
 
 const PAGES: Record<string, Pose> = {
-  "/work": { x: 0.72, y: -0.55, ry: -0.6, s: 0.58 },
+  "/work": { x: 0.8, y: -0.66, ry: -0.6, s: 0.42 },
   "/services": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
   "/about": { x: -0.7, y: -0.5, ry: 0.6, s: 0.6 },
   "/faq": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },

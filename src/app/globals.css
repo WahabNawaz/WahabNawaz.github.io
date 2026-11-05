@@ -47,6 +47,15 @@ html.lenis body {
   overscroll-behavior: contain;
 }
 
+.intro-seen .preloader {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preloader {
+    display: none;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

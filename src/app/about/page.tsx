@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
+import Desk from "@/components/about/Desk";
 import { Label } from "@/components/ui";
 import { experience, hobbies } from "@/content/data";
 import { lorem, site } from "@/content/site";
@@ -20,6 +21,8 @@ export default function AboutPage() {
         </h1>
         <p className="mt-8 max-w-2xl font-display text-2xl leading-snug tracking-tight md:text-3xl">{lorem.paragraph}</p>
       </header>
+
+      <Desk />
 
       <section className="grid gap-12 px-5 py-20 md:grid-cols-2 md:px-8">
         <Reveal>

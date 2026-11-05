@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Reveal from "@/components/Reveal";
-import { PageIntro, ProjectCard } from "@/components/ui";
+import Link from "next/link";
+import WorkReel from "@/components/work/WorkReel";
+import { Label } from "@/components/ui";
 import { projects } from "@/content/data";
 import { lorem } from "@/content/site";
 
@@ -12,13 +13,28 @@ export const metadata: Metadata = {
 export default function WorkPage() {
   return (
     <>
-      <PageIntro label="Selected work" title="Lorem ipsum dolor sit amet." text={lorem.sentence} />
-      <section className="grid gap-x-6 gap-y-20 px-5 pb-40 md:grid-cols-2 md:px-8 md:pr-[22%]">
-        {projects.map((p, i) => (
-          <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-28" : ""}>
-            <ProjectCard project={p} index={i} />
-          </Reveal>
-        ))}
+      <WorkReel />
+
+      {/* Plain index of every project (also helps search engines and screen readers) */}
+      <section className="px-5 py-28 md:px-8 md:pr-[24%]">
+        <Label>All projects</Label>
+        <ul className="mt-6 border-t border-line">
+          {projects.map((p, i) => (
+            <li key={p.slug} className="border-b border-line">
+              <Link href={`/work/${p.slug}/`} className="group flex flex-wrap items-baseline justify-between gap-4 py-6">
+                <span className="flex items-baseline gap-5">
+                  <span className="font-mono text-xs text-muted">0{i + 1}</span>
+                  <span className="font-display text-3xl font-semibold tracking-tight transition-colors group-hover:text-accent md:text-5xl">
+                    {p.title}
+                  </span>
+                </span>
+                <span className="font-mono text-xs uppercase tracking-widest text-muted">
+                  {p.tags.join(" · ")} — {p.year}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </>
   );

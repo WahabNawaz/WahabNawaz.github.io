@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { site } from "@/content/site";
 import { useSky } from "@/lib/scene-store";
+import { onIntroDone } from "@/lib/intro";
 import SkyToggle from "@/components/SkyToggle";
 
 gsap.registerPlugin(useGSAP);
@@ -20,14 +21,14 @@ export default function Hero() {
   useGSAP(
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      gsap.from("[data-line]", {
-        yPercent: 110,
-        duration: 1.1,
-        stagger: 0.08,
-        ease: "power4.out",
-        delay: 0.15,
-      });
-      gsap.from("[data-fade]", { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1, delay: 0.6 });
+      // built paused, plays when the preloader lifts (or at once on later visits)
+      const tl = gsap.timeline({ paused: true });
+      tl.from("[data-line]", { yPercent: 110, duration: 1.1, stagger: 0.08, ease: "power4.out" }).from(
+        "[data-fade]",
+        { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1 },
+        0.45,
+      );
+      return onIntroDone(() => tl.play());
     },
     { scope: ref },
   );

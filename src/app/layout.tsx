@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { site } from "@/content/site";
 import SmoothScroll from "@/components/SmoothScroll";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SceneLayer from "@/components/scene/SceneLayer";
+import Preloader from "@/components/Preloader";
 
 const display = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -55,13 +57,23 @@ const jsonLd = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${mono.variable} antialiased`}>
+    <html lang="en" className={`${display.variable} ${mono.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Hide the intro before first paint if it already played this session */}
+        <Script id="intro-seen" strategy="beforeInteractive">
+          {`try{if(sessionStorage.getItem("intro-seen")==="1")document.documentElement.classList.add("intro-seen")}catch(e){}`}
+        </Script>
+        <noscript>
+          <style>{`.preloader{display:none!important}`}</style>
+        </noscript>
+      </head>
       <body className="min-h-screen">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <SmoothScroll>
+          <Preloader />
           <Header />
           <SceneLayer />
           <main id="main" className="relative">

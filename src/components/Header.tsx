@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { nav, site } from "@/content/site";
+import RollText from "./RollText";
+import SoundToggle from "./SoundToggle";
 
 export default function Header() {
   const pathname = usePathname();
@@ -37,15 +39,18 @@ export default function Header() {
             {site.name}
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="site-menu"
-          className="font-mono text-xs uppercase tracking-widest"
-        >
-          {open ? "Close" : "Menu"}
-        </button>
+        <div className="flex items-center gap-6">
+          <SoundToggle />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="site-menu"
+            className="font-mono text-xs uppercase tracking-widest"
+          >
+            <RollText key={open ? "close" : "menu"} text={open ? "Close" : "Menu"} />
+          </button>
+        </div>
       </header>
 
       <div
@@ -72,7 +77,7 @@ export default function Header() {
                 >
                   <span className="font-mono text-xs text-accent">0{i + 1}</span>
                   <span className={isActive(item.href) ? "text-accent" : "group-hover:text-accent"}>
-                    {item.label}
+                    <RollText text={item.label} />
                   </span>
                 </Link>
               </li>

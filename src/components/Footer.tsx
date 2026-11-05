@@ -8,6 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { nav, site } from "@/content/site";
 import { sceneStore } from "@/lib/scene-store";
+import RollText from "./RollText";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -63,7 +64,7 @@ export default function Footer() {
             {nav.map((n) => (
               <li key={n.href}>
                 <Link href={n.href} className="hover:text-accent">
-                  {n.label}
+                  <RollText text={n.label} />
                 </Link>
               </li>
             ))}
@@ -75,7 +76,7 @@ export default function Footer() {
             {site.socials.map((s) => (
               <li key={s.label}>
                 <a href={s.href} target="_blank" rel="noreferrer" className="hover:text-accent">
-                  {s.label}
+                  <RollText text={s.label} />
                 </a>
               </li>
             ))}

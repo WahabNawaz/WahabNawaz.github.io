@@ -1,6 +1,7 @@
 // Small shared building blocks (server-safe, no hooks).
 import Link from "next/link";
 import type { Project } from "@/content/data";
+import RollText from "./RollText";
 
 export function Label({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <p className={`font-mono text-xs uppercase tracking-widest text-muted ${className}`}>{children}</p>;
@@ -71,7 +72,7 @@ export function ArrowLink({ href, children, dark = false }: { href: string; chil
         dark ? "bg-paper text-ink hover:bg-accent" : "bg-ink text-paper hover:bg-accent hover:text-ink"
       }`}
     >
-      {children} <span aria-hidden>↗</span>
+      {typeof children === "string" ? <RollText text={children} /> : children} <span aria-hidden>↗</span>
     </Link>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Hero from "@/components/home/Hero";
+import Marquee from "@/components/Marquee";
 import PoseScope from "@/components/PoseScope";
 import Reveal from "@/components/Reveal";
 import ScrubText from "@/components/ScrubText";
@@ -25,32 +26,26 @@ export default function Home() {
       </section>
 
       {/* Marquee band */}
-      <section aria-label="Services" className="overflow-hidden bg-ink py-6 text-paper">
-        <div className="marquee-track flex w-max">
-          {[0, 1].map((copy) => (
-            <ul key={copy} aria-hidden={copy === 1} className="flex shrink-0">
-              {services.map((s) => (
-                <li key={s.id} className="flex items-center gap-6 px-6 font-display text-4xl font-semibold uppercase tracking-tight md:text-6xl">
-                  {s.title}
-                  <span className="text-accent">✦</span>
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
+      <section aria-label="Services" className="bg-ink py-6 text-paper">
+        <Marquee items={services.map((s) => s.title)} />
       </section>
 
       {/* Services overview */}
       <section data-pose="left" className="px-5 py-32 md:px-8 md:pl-[26%]">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className="max-w-2xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-            Four things, done end to end.
+            Five platforms, one developer.
           </h2>
           <ArrowLink href="/services/">All services</ArrowLink>
         </div>
         <div className="mt-16 grid gap-4 md:grid-cols-2">
           {services.map((s, i) => (
-            <Reveal key={s.id} delay={i * 0.05}>
+            <Reveal
+              key={s.id}
+              delay={(i % 2) * 0.05}
+              // odd count: the last card spans the full row
+              className={services.length % 2 && i === services.length - 1 ? "md:col-span-2" : ""}
+            >
               <Link
                 href={`/services/#${s.id}`}
                 className="group flex h-full flex-col justify-between gap-10 rounded-3xl border border-line p-8 transition-colors hover:bg-ink hover:text-paper"
