@@ -1,0 +1,75 @@
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import "./globals.css";
+import { site } from "@/content/site";
+import SmoothScroll from "@/components/SmoothScroll";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SceneLayer from "@/components/scene/SceneLayer";
+
+const display = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
+  title: {
+    default: `${site.name} — ${site.role}`,
+    template: `%s — ${site.name}`,
+  },
+  description: site.description,
+  openGraph: {
+    title: `${site.name} — ${site.role}`,
+    description: site.description,
+    url: site.url,
+    siteName: site.name,
+    type: "website",
+  },
+  twitter: { card: "summary_large_image" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f3f0ea",
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      name: site.name,
+      url: site.url,
+      email: `mailto:${site.email}`,
+      jobTitle: site.role,
+      sameAs: site.socials.map((s) => s.href),
+    },
+    { "@type": "WebSite", name: site.name, url: site.url },
+  ],
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html lang="en" className={`${display.variable} ${mono.variable} antialiased`}>
+      <body className="min-h-screen">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <SmoothScroll>
+          <Header />
+          <SceneLayer />
+          <main id="main" className="relative">
+            {children}
+          </main>
+          <Footer />
+        </SmoothScroll>
+      </body>
+    </html>
+  );
+}
