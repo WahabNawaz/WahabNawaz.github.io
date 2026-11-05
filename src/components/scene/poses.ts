@@ -14,13 +14,16 @@ import type { AnimState } from "@/content/avatar";
 export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
-  hero: { x: 0.42, y: -0.2, ry: -0.45, s: 1.2 },
+  // sitting on the floating rock, centre-left, under the centred headline
+  hero: { x: -0.3, y: -0.4, ry: 0.3, s: 1.25 },
+  // seated at the desk (pitch section)
+  desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
   right: { x: 0.66, y: -0.3, ry: -0.65, s: 0.72 },
   "right-high": { x: 0.68, y: 0.15, ry: -0.7, s: 0.6 },
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
   // standing in front of the big sliding name
-  name: { x: 0.3, y: -0.55, ry: -0.35, s: 0.75 },
+  name: { x: 0.3, y: -0.42, ry: -0.35, s: 0.8 },
   // services page: in the middle of the orbiting tool logos
   orbit: { x: 0.45, y: -0.32, ry: -0.2, s: 0.62 },
 };
@@ -32,7 +35,7 @@ const PAGES: Record<string, Pose> = {
   "/faq": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
   "/photography": { x: 0.74, y: -0.55, ry: -0.5, s: 0.5 },
   "/contact": { x: 0.0, y: -0.42, ry: 0.0, s: 0.95 },
-  "/playground": { x: 0.0, y: -0.38, ry: 0.0, s: 1.15 },
+  "/playground": { x: 0.0, y: -0.3, ry: 0.0, s: 1.0 },
 };
 
 const CASE_STUDY: Pose = { x: 0.78, y: -0.62, ry: -0.6, s: 0.42 };
@@ -44,7 +47,7 @@ const MOBILE_CORNER: Pose = { x: 0.62, y: -0.78, ry: -0.5, s: 0.3 };
 const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.0, s: 0.56 };
 
 // Footer text sits on the left, so the character moves right when it shows.
-const FOOTER: Pose = { x: 0.6, y: -0.35, ry: -0.5, s: 0.8 };
+const FOOTER: Pose = { x: 0.8, y: -0.3, ry: -0.5, s: 0.7 };
 
 export function poseFor(pathname: string, section: string | null, mobile: boolean, footer = false): Pose {
   const path = pathname.replace(/\/$/, "") || "/";
@@ -64,6 +67,7 @@ export function poseFor(pathname: string, section: string | null, mobile: boolea
 // Which animation the character plays where. Names match src/content/avatar.ts.
 const SECTION_ANIM: Record<string, AnimState> = {
   hero: "typing",
+  desk: "typing",
   name: "jump",
   orbit: "idle",
 };

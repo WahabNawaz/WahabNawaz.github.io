@@ -11,7 +11,7 @@ import { sceneStore } from "@/lib/scene-store";
 import { avatar, type AnimState } from "@/content/avatar";
 import { animFor, poseFor } from "./poses";
 import { pointer } from "./pointer";
-import AvatarRig from "./AvatarRig";
+import AvatarRig, { type Seat } from "./AvatarRig";
 
 export type AnimRef = { current: AnimState };
 
@@ -202,10 +202,115 @@ function PlaceholderBody({ anim }: { anim: AnimRef }) {
   );
 }
 
+/**
+ * Things the avatar uses: a floating rock + laptop (hero, seated typing) and a
+ * desk, monitor and chair (section "desk"). Simple shapes made here, no files.
+ */
+function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current: string } }) {
+  const rock = useRef<THREE.Group>(null);
+  const laptop = useRef<THREE.Group>(null);
+  const desk = useRef<THREE.Group>(null);
+
+  useFrame((_, dt) => {
+    const { w, hipY } = seat.current;
+    const k = 1 - Math.exp(-dt * 6);
+    const show = (g: THREE.Group | null, on: boolean) => {
+      if (!g) return;
+      const s = g.scale.x + ((on ? 1 : 0) - g.scale.x) * k;
+      g.scale.setScalar(Math.max(s, 0.0001));
+      g.visible = s > 0.01;
+    };
+    const onRock = place.current === "rock" && w > 0.5;
+    const atDesk = place.current === "desk" && w > 0.5;
+    if (rock.current) rock.current.position.y = hipY - 0.16;
+    if (laptop.current) laptop.current.position.y = hipY + 0.08;
+    if (desk.current) desk.current.position.y = hipY;
+    show(rock.current, onRock);
+    show(laptop.current, onRock);
+    show(desk.current, atDesk);
+  });
+
+  return (
+    <>
+      {/* floating rock to sit on */}
+      <group ref={rock} position={[0, -0.3, -0.05]} scale={0.0001}>
+        <mesh scale={[0.75, 0.32, 0.55]}>
+          <icosahedronGeometry args={[1, 1]} />
+          <meshStandardMaterial color="#8a8f86" roughness={0.95} flatShading />
+        </mesh>
+        <mesh position={[0, 0.2, 0]} scale={[0.7, 0.06, 0.5]}>
+          <sphereGeometry args={[1, 16, 8]} />
+          <meshStandardMaterial color="#6f9b5a" roughness={1} flatShading />
+        </mesh>
+      </group>
+
+      {/* laptop on the lap, lid towards the character */}
+      <group ref={laptop} position={[0, 0, 0.32]} scale={0.0001}>
+        <RoundedBox args={[0.5, 0.025, 0.34]} radius={0.01}>
+          <meshStandardMaterial color={C.laptop} metalness={0.6} roughness={0.35} />
+        </RoundedBox>
+        <group position={[0, 0.01, 0.17]} rotation={[1.85, 0, 0]}>
+          <RoundedBox args={[0.5, 0.018, 0.34]} radius={0.01} position={[0, 0, -0.17]}>
+            <meshStandardMaterial color={C.laptop} metalness={0.6} roughness={0.35} />
+          </RoundedBox>
+          <mesh position={[0, 0.011, -0.17]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.035, 24]} />
+            <meshBasicMaterial color={C.screen} toneMapped={false} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* desk, monitor and chair */}
+      <group ref={desk} scale={0.0001}>
+        <mesh position={[0, -0.18, -0.05]}>
+          <boxGeometry args={[0.6, 0.06, 0.55]} />
+          <meshStandardMaterial color="#2b2b33" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.2, -0.33]}>
+          <boxGeometry args={[0.6, 0.7, 0.06]} />
+          <meshStandardMaterial color="#2b2b33" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, -0.6, -0.05]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.8, 12]} />
+          <meshStandardMaterial color="#444" />
+        </mesh>
+        <RoundedBox args={[1.5, 0.06, 0.7]} radius={0.02} position={[0, 0.32, 0.75]}>
+          <meshStandardMaterial color={C.desk} roughness={0.7} />
+        </RoundedBox>
+        {[-0.68, 0.68].map((x) => (
+          <mesh key={x} position={[x, -0.33, 0.75]}>
+            <boxGeometry args={[0.05, 1.3, 0.6]} />
+            <meshStandardMaterial color={C.desk} roughness={0.8} />
+          </mesh>
+        ))}
+        <group position={[0, 0.72, 0.95]}>
+          <RoundedBox args={[0.9, 0.55, 0.04]} radius={0.02}>
+            <meshStandardMaterial color="#1b1b20" roughness={0.4} />
+          </RoundedBox>
+          <mesh position={[0, 0, -0.025]}>
+            <planeGeometry args={[0.84, 0.49]} />
+            <meshStandardMaterial color="#111" emissive={C.screen} emissiveIntensity={0.6} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, -0.35, 0]}>
+            <boxGeometry args={[0.06, 0.2, 0.06]} />
+            <meshStandardMaterial color="#1b1b20" />
+          </mesh>
+        </group>
+        <RoundedBox args={[0.6, 0.03, 0.2]} radius={0.01} position={[0, 0.36, 0.55]}>
+          <meshStandardMaterial color="#e9e9ee" />
+        </RoundedBox>
+      </group>
+    </>
+  );
+}
+
 export default function Avatar({ pathname }: { pathname: string }) {
   const root = useRef<THREE.Group>(null);
+  const hop = useRef<THREE.Group>(null);
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
+  const seat = useRef<Seat>({ w: 0, hipY: -0.1 });
+  const place = useRef<string>("");
 
   useFrame((state, dt) => {
     const g = root.current;
@@ -215,6 +320,9 @@ export default function Avatar({ pathname }: { pathname: string }) {
     const { section, footer, dance } = sceneStore.get();
     const pose = poseFor(pathname, section, mobile, footer);
     anim.current = animFor(pathname, section, footer, dance);
+    // which seat props to show: rock in the hero, desk in the "desk" section
+    const path = pathname.replace(/\/$/, "") || "/";
+    place.current = footer ? "" : section === "hero" || (path === "/" && !section) ? "rock" : section === "desk" ? "desk" : "";
 
     // ease towards the target pose (also animates page-to-page moves)
     const k = 1 - Math.exp(-dt * 3.2);
@@ -227,21 +335,37 @@ export default function Avatar({ pathname }: { pathname: string }) {
       g.rotation.y = pose.ry;
       placed.current = true;
     }
-    g.position.x += (tx - g.position.x) * k;
+    // Travelling to a new spot: run, face the way it goes and jump in an arc.
+    const dx = tx - g.position.x;
+    const dist = Math.hypot(dx, ty - g.position.y);
+    const travelling = dist > viewport.height * 0.06 && !(dance.active && path === "/playground");
+    if (travelling) anim.current = "jump";
+    const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : pose.ry + pointer.x * 0.15;
+
+    g.position.x += dx * k;
     g.position.y += (ty - g.position.y) * k;
-    g.rotation.y += (pose.ry + pointer.x * 0.15 - g.rotation.y) * k;
+    g.rotation.y += (facing - g.rotation.y) * k * 1.5;
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
+    if (hop.current) {
+      const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
+      hop.current.position.y += (lift - hop.current.position.y) * (1 - Math.exp(-dt * 6));
+    }
   });
 
   return (
     <group ref={root} scale={0.001}>
-      {avatar.enabled ? (
-        <Suspense fallback={<PlaceholderBody anim={anim} />}>
-          <AvatarRig anim={anim} />
-        </Suspense>
-      ) : (
-        <PlaceholderBody anim={anim} />
-      )}
+      <group ref={hop}>
+        {avatar.enabled ? (
+          <>
+            <Suspense fallback={<PlaceholderBody anim={anim} />}>
+              <AvatarRig anim={anim} onSeat={(s) => (seat.current = s)} />
+            </Suspense>
+            <SeatProps seat={seat} place={place} />
+          </>
+        ) : (
+          <PlaceholderBody anim={anim} />
+        )}
+      </group>
     </group>
   );
 }

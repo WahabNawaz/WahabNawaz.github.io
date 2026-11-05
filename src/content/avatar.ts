@@ -17,16 +17,22 @@ export const avatar: {
   model: string;
   clips: Partial<Record<AnimState, { file: string; clip?: string }>>;
 } = {
-  enabled: false,
+  // DUMMY for now: "Hoodie Character" by Quaternius (Ultimate Modular Men
+  // Pack, Public Domain CC0, via poly.pizza). Its built-in clips stand in
+  // for each state. Swap in your Avaturn avatar + Mixamo clips later (README).
+  enabled: true,
   model: "/models/avatar.glb",
   clips: {
-    idle: { file: "/models/anim/idle.glb" },
-    typing: { file: "/models/anim/typing.glb" },
-    jump: { file: "/models/anim/jump.glb" },
-    wave: { file: "/models/anim/wave.glb" },
-    sit: { file: "/models/anim/sit.glb" },
-    push: { file: "/models/anim/push.glb" },
-    dance1: { file: "/models/anim/dance1.glb" },
-    dance2: { file: "/models/anim/dance2.glb" },
+    idle: { file: "/models/avatar.glb", clip: "CharacterArmature|Idle_Neutral" },
+    typing: { file: "/models/avatar.glb", clip: "CharacterArmature|Idle" },
+    sit: { file: "/models/avatar.glb", clip: "CharacterArmature|Idle" },
+    jump: { file: "/models/avatar.glb", clip: "CharacterArmature|Run" },
+    wave: { file: "/models/avatar.glb", clip: "CharacterArmature|Wave" },
+    push: { file: "/models/avatar.glb", clip: "CharacterArmature|Interact" },
+    dance1: { file: "/models/avatar.glb", clip: "CharacterArmature|Wave" },
+    dance2: { file: "/models/avatar.glb", clip: "CharacterArmature|Run" },
   },
+  // Your own avatar later, one file per clip:
+  // model: "/models/avatar.glb",
+  // clips: { idle: { file: "/models/anim/idle.glb" }, typing: { file: "/models/anim/typing.glb" }, ... }
 };

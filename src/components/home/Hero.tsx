@@ -1,7 +1,9 @@
 "use client";
 
+// Hero: centred headline, the 3D character sitting on a floating rock with a
+// laptop (drawn by the 3D layer, pose "hero"), a hand-drawn note pointing at
+// it, the sky switch at the bottom centre and a short intro bottom-right.
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -23,59 +25,59 @@ export default function Hero() {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       // built paused, plays when the preloader lifts (or at once on later visits)
       const tl = gsap.timeline({ paused: true });
-      tl.from("[data-line]", { yPercent: 110, duration: 1.1, stagger: 0.08, ease: "power4.out" }).from(
-        "[data-fade]",
-        { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1 },
-        0.45,
-      );
+      tl.from("[data-line]", { yPercent: 110, duration: 1.1, stagger: 0.08, ease: "power4.out" })
+        .from("[data-fade]", { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1 }, 0.45)
+        .from("[data-arrow] path", { strokeDashoffset: 120, duration: 1, ease: "power2.out" }, 0.9);
       return onIntroDone(() => tl.play());
     },
     { scope: ref },
   );
 
-  const lines = ["Lorem ipsum", "dolor sit amet,", "consectetur."];
+  const lines = ["Lorem Ipsum Dolor Sit", "Amet Consectetur Elit."];
 
   return (
     <section
       ref={ref}
       data-pose="hero"
-      className={`relative isolate flex h-svh min-h-[640px] flex-col justify-between overflow-hidden px-5 pb-6 pt-28 transition-colors duration-700 md:px-8 ${
+      className={`relative isolate h-svh min-h-[640px] overflow-hidden px-5 pb-8 pt-24 transition-colors duration-700 md:px-8 ${
         night ? "text-paper" : "text-ink"
       }`}
     >
       <Sky className="absolute inset-0 -z-10 bg-[#cfe0f0]" />
 
-      <div className="max-w-[56rem]">
-        <p data-fade className="mb-6 font-mono text-xs uppercase tracking-widest">
-          {site.name} · {site.role}
-        </p>
-        <h1 className="font-display text-[13vw] font-semibold leading-[0.92] tracking-tight md:text-[7.5vw]">
-          {lines.map((l) => (
-            <span key={l} className="block overflow-hidden pb-[0.06em]">
-              <span data-line className="block">
-                {l}
-              </span>
+      {/* centred headline */}
+      <h1 className="text-center font-display text-[10vw] font-medium leading-[1.02] tracking-tight md:text-[5.6vw]">
+        {lines.map((l) => (
+          <span key={l} className="block overflow-hidden pb-[0.06em]">
+            <span data-line className="block">
+              {l}
             </span>
-          ))}
-        </h1>
+          </span>
+        ))}
+      </h1>
+
+      {/* hand-drawn note pointing at the character (desktop) */}
+      <div data-fade className="absolute left-[46%] top-[66%] hidden items-start gap-3 md:flex">
+        <svg data-arrow viewBox="0 0 70 50" className="mt-[-28px] h-12 w-16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+          <path d="M66 44 C 40 46, 18 36, 10 8" strokeDasharray="120" strokeDashoffset="0" />
+          <path d="M4 16 L10 6 L17 14" />
+        </svg>
+        <p className="font-display text-base font-medium leading-snug">
+          That&apos;s me,
+          <br />
+          lorem ipsum dolor.
+        </p>
       </div>
 
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div data-fade className="max-w-sm space-y-5">
-          <p className="text-base leading-relaxed md:text-lg">{site.tagline}</p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/work/" className="rounded-full bg-ink px-5 py-3 font-mono text-xs uppercase tracking-widest text-paper hover:bg-accent hover:text-ink">
-              View work
-            </Link>
-            <Link href="/contact/" className="rounded-full border border-current px-5 py-3 font-mono text-xs uppercase tracking-widest hover:bg-current/10">
-              Get in touch
-            </Link>
-          </div>
-        </div>
-        <div data-fade className="flex items-center gap-4">
+      {/* bottom row: sky switch centred, intro on the right */}
+      <div className="absolute inset-x-5 bottom-8 flex flex-col items-center gap-6 md:inset-x-8 md:flex-row md:items-end md:justify-between">
+        <span className="hidden w-80 md:block" />
+        <div data-fade>
           <SkyToggle />
-          <span className="hidden font-mono text-[11px] uppercase tracking-widest md:block">Scroll ↓</span>
         </div>
+        <p data-fade className="max-w-xs text-center text-sm font-medium leading-relaxed md:w-80 md:text-right md:text-base">
+          {site.name}, {site.role.toLowerCase()}. {site.tagline}
+        </p>
       </div>
     </section>
   );

@@ -41,7 +41,7 @@ export default function Pitch() {
   );
 
   return (
-    <section ref={root} data-pose="left" className="grid gap-12 px-5 py-32 md:grid-cols-[1.1fr_1fr] md:px-8 md:pl-[26%]">
+    <section ref={root} data-pose="desk" className="grid gap-12 px-5 py-32 md:grid-cols-[1.1fr_1fr] md:px-8 md:pl-[34%]">
       <div>
         <h2 className="font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           {LINES.map((l) => (

@@ -42,7 +42,7 @@ function Lights() {
   );
 }
 
-function Shapes() {
+export function Shapes() {
   // decorative floating objects; only shown while the hero is in view
   const group = useRef<THREE.Group>(null);
   useFrame(({ viewport }, dt) => {
@@ -95,7 +95,8 @@ export default function Scene({ pathname }: { pathname: string }) {
     >
       <Lights />
       <Avatar pathname={pathname} />
-      {pathname === "/" && <Shapes />}
+      {/* decorative floating shapes are off now that the hero has the rock;
+          put <Shapes /> back here to show them on the home hero */}
     </Canvas>
   );
 }
