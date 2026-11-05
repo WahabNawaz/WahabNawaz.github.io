@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useLenis } from "lenis/react";
@@ -9,6 +10,9 @@ import { useGSAP } from "@gsap/react";
 import { nav, site } from "@/content/site";
 import { sceneStore } from "@/lib/scene-store";
 import RollText from "./RollText";
+import { useSky } from "@/lib/scene-store";
+
+const Sky = dynamic(() => import("./scene/Sky"), { ssr: false });
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -30,6 +34,7 @@ function LocalTime() {
 
 export default function Footer() {
   const lenis = useLenis();
+  const night = useSky() === "night";
   const ref = useRef<HTMLElement>(null);
 
   // Tell the 3D character when the footer is on screen (it moves aside).
@@ -45,8 +50,12 @@ export default function Footer() {
   });
 
   return (
-    <footer ref={ref} className="relative z-10 bg-ink px-5 pb-8 pt-24 text-paper md:px-8">
-      <p className="font-mono text-xs uppercase tracking-widest text-paper/60">Lorem ipsum?</p>
+    <footer
+      ref={ref}
+      className={`relative isolate z-10 overflow-hidden px-5 pb-8 pt-24 transition-colors duration-700 md:px-8 ${night ? "text-paper" : "text-ink"}`}
+    >
+      <Sky className="absolute inset-0 -z-10 bg-[#cfe0f0]" />
+      <p className="font-mono text-xs uppercase tracking-widest opacity-60">Lorem ipsum?</p>
       <h2 className="mt-4 max-w-4xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-8xl">
         Got something worth building?
       </h2>
@@ -57,9 +66,9 @@ export default function Footer() {
         {site.email}
       </a>
 
-      <div className="mt-24 grid grid-cols-2 gap-8 border-t border-paper/15 pt-8 font-mono text-xs uppercase tracking-widest md:grid-cols-4">
+      <div className="mt-24 grid grid-cols-2 gap-8 border-t border-current/15 pt-8 font-mono text-xs uppercase tracking-widest md:grid-cols-4">
         <div>
-          <p className="mb-3 text-paper/50">Pages</p>
+          <p className="mb-3 opacity-50">Pages</p>
           <ul className="space-y-2">
             {nav.map((n) => (
               <li key={n.href}>
@@ -71,7 +80,7 @@ export default function Footer() {
           </ul>
         </div>
         <div>
-          <p className="mb-3 text-paper/50">Social</p>
+          <p className="mb-3 opacity-50">Social</p>
           <ul className="space-y-2">
             {site.socials.map((s) => (
               <li key={s.label}>
@@ -83,20 +92,20 @@ export default function Footer() {
           </ul>
         </div>
         <div>
-          <p className="mb-3 text-paper/50">Local time</p>
+          <p className="mb-3 opacity-50">Local time</p>
           <p>
             <LocalTime /> · {site.location}
           </p>
         </div>
         <div>
-          <p className="mb-3 text-paper/50">Status</p>
+          <p className="mb-3 opacity-50">Status</p>
           <p className="flex items-center gap-2">
             <span className="size-2 animate-pulse rounded-full bg-accent" /> {site.status}
           </p>
         </div>
       </div>
 
-      <div className="mt-16 flex items-center justify-between font-mono text-xs uppercase tracking-widest text-paper/50">
+      <div className="mt-16 flex items-center justify-between font-mono text-xs uppercase tracking-widest opacity-50">
         <span>© {site.year} {site.name}</span>
         <button type="button" onClick={() => lenis?.scrollTo(0)} className="hover:text-accent">
           Back to top ↑

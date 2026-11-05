@@ -1,22 +1,27 @@
 import Link from "next/link";
 import Hero from "@/components/home/Hero";
+import NameScroll from "@/components/home/NameScroll";
+import Pitch from "@/components/home/Pitch";
+import ProcessStack from "@/components/home/ProcessStack";
 import Marquee from "@/components/Marquee";
 import PoseScope from "@/components/PoseScope";
 import Reveal from "@/components/Reveal";
 import ScrubText from "@/components/ScrubText";
-import Testimonials from "@/components/Testimonials";
 import { ArrowLink, Label, ProjectCard } from "@/components/ui";
-import { clients, process, projects, services } from "@/content/data";
+import { clients, projects, services } from "@/content/data";
 import { lorem } from "@/content/site";
 
-// data-pose on each section tells the 3D character where to stand
-// (see src/components/scene/poses.ts). Content leaves room on that side.
+// Section order follows the reference: hero → big name → statement → pitch
+// + reviews → marquee → work → clients → services → process → footer.
+// data-pose tells the 3D character where to stand (src/components/scene/poses.ts).
 export default function Home() {
   return (
     <PoseScope>
       <Hero />
 
-      {/* Intro statement */}
+      <NameScroll />
+
+      {/* Statement */}
       <section data-pose="right" className="px-5 py-32 md:px-8 md:py-44 md:pr-[30%]">
         <Label>Lorem ipsum</Label>
         <ScrubText
@@ -25,13 +30,48 @@ export default function Home() {
         />
       </section>
 
+      <Pitch />
+
       {/* Marquee band */}
       <section aria-label="Services" className="bg-ink py-6 text-paper">
         <Marquee items={services.map((s) => s.title)} />
       </section>
 
-      {/* Services overview */}
+      {/* Selected work */}
+      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <Label>Selected work</Label>
+            <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
+              Lorem ipsum dolor.
+            </h2>
+          </div>
+          <ArrowLink href="/work/">See all work</ArrowLink>
+        </div>
+        <div className="mt-16 grid gap-x-6 gap-y-16 md:grid-cols-2">
+          {projects.slice(0, 4).map((p, i) => (
+            <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-24" : ""}>
+              <ProjectCard project={p} index={i} />
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Clients */}
       <section data-pose="left" className="px-5 py-32 md:px-8 md:pl-[26%]">
+        <Label>Trusted by</Label>
+        <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">In good company.</h2>
+        <ul className="mt-10 grid grid-cols-2 border-l border-t border-line md:grid-cols-4">
+          {clients.map((c) => (
+            <li key={c} className="grid h-28 place-items-center border-b border-r border-line font-display text-2xl font-semibold tracking-tight text-ink/60">
+              {c}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Services overview */}
+      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className="max-w-2xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
             Five platforms, one developer.
@@ -61,57 +101,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Selected work */}
-      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <Label>Selected work</Label>
-            <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-              Lorem ipsum dolor.
-            </h2>
-          </div>
-          <ArrowLink href="/work/">See all work</ArrowLink>
-        </div>
-        <div className="mt-16 grid gap-x-6 gap-y-16 md:grid-cols-2">
-          {projects.slice(0, 4).map((p, i) => (
-            <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-24" : ""}>
-              <ProjectCard project={p} index={i} />
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* Clients + testimonials */}
-      <section data-pose="left" className="px-5 py-32 md:px-8 md:pl-[26%]">
-        <Label>Trusted by</Label>
-        <ul className="mt-8 grid grid-cols-2 border-l border-t border-line md:grid-cols-4">
-          {clients.map((c) => (
-            <li key={c} className="grid h-28 place-items-center border-b border-r border-line font-display text-2xl font-semibold tracking-tight text-ink/60">
-              {c}
-            </li>
-          ))}
-        </ul>
-        <Reveal className="mt-16">
-          <Testimonials />
-        </Reveal>
-      </section>
-
-      {/* Process */}
-      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">
-        <Label>How a project runs</Label>
-        <h2 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          Four steps, nothing hidden.
-        </h2>
-        <ol className="mt-16 grid gap-4 md:grid-cols-2">
-          {process.map((p, i) => (
-            <Reveal as="li" key={p.step} delay={(i % 2) * 0.08} className="rounded-3xl bg-white/70 p-8">
-              <span className="font-mono text-xs text-accent">Step {p.step}</span>
-              <h3 className="mt-3 font-display text-3xl font-semibold tracking-tight">{p.title}</h3>
-              <p className="mt-3 text-ink/70">{p.text}</p>
-            </Reveal>
-          ))}
-        </ol>
-      </section>
+      <ProcessStack />
     </PoseScope>
   );
 }

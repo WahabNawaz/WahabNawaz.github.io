@@ -17,6 +17,8 @@ export const NAMED: Record<string, Pose> = {
   right: { x: 0.66, y: -0.3, ry: -0.65, s: 0.72 },
   "right-high": { x: 0.68, y: 0.15, ry: -0.7, s: 0.6 },
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
+  // standing in front of the big sliding name
+  name: { x: 0.3, y: -0.55, ry: -0.35, s: 0.75 },
 };
 
 const PAGES: Record<string, Pose> = {
@@ -24,6 +26,7 @@ const PAGES: Record<string, Pose> = {
   "/services": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
   "/about": { x: -0.7, y: -0.5, ry: 0.6, s: 0.6 },
   "/faq": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
+  "/photography": { x: 0.74, y: -0.55, ry: -0.5, s: 0.5 },
   "/contact": { x: 0.0, y: -0.42, ry: 0.0, s: 0.95 },
 };
 
