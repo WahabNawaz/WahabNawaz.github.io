@@ -47,6 +47,12 @@ html.lenis body {
   overscroll-behavior: contain;
 }
 
+/* hide the system cursor when the custom one is active */
+.has-cursor,
+.has-cursor * {
+  cursor: none !important;
+}
+
 .intro-seen .preloader {
   display: none;
 }

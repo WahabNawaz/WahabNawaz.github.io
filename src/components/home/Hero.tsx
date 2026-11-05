@@ -3,22 +3,17 @@
 // Hero: centred headline, the 3D character sitting on a floating rock with a
 // laptop (drawn by the 3D layer, pose "hero"), a hand-drawn note pointing at
 // it, the sky switch at the bottom centre and a short intro bottom-right.
-import dynamic from "next/dynamic";
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { site } from "@/content/site";
-import { useSky } from "@/lib/scene-store";
 import { onIntroDone } from "@/lib/intro";
 import SkyToggle from "@/components/SkyToggle";
 
 gsap.registerPlugin(useGSAP);
 
-const Sky = dynamic(() => import("@/components/scene/Sky"), { ssr: false });
-
 export default function Hero() {
   const ref = useRef<HTMLElement>(null);
-  const night = useSky() === "night";
 
   useGSAP(
     () => {
@@ -39,12 +34,8 @@ export default function Hero() {
     <section
       ref={ref}
       data-pose="hero"
-      className={`relative isolate h-svh min-h-[640px] overflow-hidden px-5 pb-8 pt-24 transition-colors duration-700 md:px-8 ${
-        night ? "text-paper" : "text-ink"
-      }`}
+      className="relative h-svh min-h-[640px] overflow-hidden px-5 pb-8 pt-24 md:px-8"
     >
-      <Sky className="absolute inset-0 -z-10 bg-[#cfe0f0]" />
-
       {/* centred headline */}
       <h1 className="text-center font-display text-[10vw] font-medium leading-[1.02] tracking-tight md:text-[5.6vw]">
         {lines.map((l) => (

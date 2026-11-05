@@ -3,72 +3,49 @@ import Hero from "@/components/home/Hero";
 import NameScroll from "@/components/home/NameScroll";
 import Pitch from "@/components/home/Pitch";
 import ProcessStack from "@/components/home/ProcessStack";
-import Marquee from "@/components/Marquee";
+import SkyStage from "@/components/home/SkyStage";
+import RoleSection from "@/components/home/RoleSection";
+import ServiceBand from "@/components/home/ServiceBand";
+import WorkShowcase from "@/components/home/WorkShowcase";
+import ClientsBand from "@/components/home/ClientsBand";
 import PoseScope from "@/components/PoseScope";
 import Reveal from "@/components/Reveal";
 import ScrubText from "@/components/ScrubText";
-import { ArrowLink, Label, ProjectCard } from "@/components/ui";
-import { clients, projects, services } from "@/content/data";
+import { ArrowLink } from "@/components/ui";
+import { services } from "@/content/data";
 import { lorem } from "@/content/site";
 
-// Section order follows the reference: hero → big name → statement → pitch
-// + reviews → marquee → work → clients → services → process → footer.
+// Section order follows the reference: sky opening (hero → big name →
+// statement) → pitch at the desk → role → service band → work → clients →
+// services → process → footer.
 // data-pose tells the 3D character where to stand (src/components/scene/poses.ts).
 export default function Home() {
   return (
     <PoseScope>
-      <Hero />
+      {/* the sky stays behind these three, like one continuous opening */}
+      <SkyStage>
+        <Hero />
 
-      <NameScroll />
+        <NameScroll />
 
-      {/* Statement */}
-      <section data-pose="right" className="px-5 py-32 md:px-8 md:py-44 md:pr-[30%]">
-        <Label>Lorem ipsum</Label>
-        <ScrubText
-          text={`${lorem.paragraph} ${lorem.sentence}`}
-          className="mt-8 font-display text-3xl font-medium leading-[1.15] tracking-tight md:text-5xl"
-        />
-      </section>
+        {/* Statement: one short line in the middle of the sky */}
+        <section data-pose="right" className="grid min-h-svh place-items-center px-5 py-32 md:px-8">
+          <ScrubText
+            text="Lorem ipsum, made simple."
+            className="max-w-4xl text-center font-display text-5xl font-medium leading-[1.05] tracking-tight md:text-8xl"
+          />
+        </section>
+      </SkyStage>
 
       <Pitch />
 
-      {/* Marquee band */}
-      <section aria-label="Services" className="bg-ink py-6 text-paper">
-        <Marquee items={services.map((s) => s.title)} />
-      </section>
+      <RoleSection />
 
-      {/* Selected work */}
-      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <Label>Selected work</Label>
-            <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-              Lorem ipsum dolor.
-            </h2>
-          </div>
-          <ArrowLink href="/work/">See all work</ArrowLink>
-        </div>
-        <div className="mt-16 grid gap-x-6 gap-y-16 md:grid-cols-2">
-          {projects.slice(0, 4).map((p, i) => (
-            <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-24" : ""}>
-              <ProjectCard project={p} index={i} />
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      <ServiceBand />
 
-      {/* Clients */}
-      <section data-pose="left" className="px-5 py-32 md:px-8 md:pl-[26%]">
-        <Label>Trusted by</Label>
-        <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">In good company.</h2>
-        <ul className="mt-10 grid grid-cols-2 border-l border-t border-line md:grid-cols-4">
-          {clients.map((c) => (
-            <li key={c} className="grid h-28 place-items-center border-b border-r border-line font-display text-2xl font-semibold tracking-tight text-ink/60">
-              {c}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <WorkShowcase />
+
+      <ClientsBand />
 
       {/* Services overview */}
       <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[26%]">

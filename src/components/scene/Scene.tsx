@@ -3,9 +3,10 @@
 // The persistent 3D layer. It lives in the root layout, so it is NOT
 // re-created on page changes: the character walks from page to page.
 import { useEffect, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
 import Avatar from "./Avatar";
 import { trackPointer } from "./pointer";
@@ -15,6 +16,29 @@ const LIGHT: Record<SkyMode, { key: string; fill: string; keyI: number; ambI: nu
   sunset: { key: "#ffb27a", fill: "#8a7cff", keyI: 2.0, ambI: 0.7 },
   night: { key: "#b4c3ff", fill: "#3a4890", keyI: 1.7, ambI: 0.75 },
 };
+
+/**
+ * Soft studio reflections for PBR materials, generated in code (three.js
+ * RoomEnvironment), so no HDR file has to be downloaded.
+ */
+function applyStudioEnvironment(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
+  const pmrem = new THREE.PMREMGenerator(gl);
+  const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = env;
+  scene.environmentIntensity = 0.75;
+  return () => {
+    scene.environment = null;
+    env.dispose();
+    pmrem.dispose();
+  };
+}
+
+function StudioEnv() {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  useEffect(() => applyStudioEnvironment(gl, scene), [gl, scene]);
+  return null;
+}
 
 function Lights() {
   const key = useRef<THREE.DirectionalLight>(null);
@@ -93,6 +117,7 @@ export default function Scene({ pathname }: { pathname: string }) {
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       aria-hidden
     >
+      <StudioEnv />
       <Lights />
       <Avatar pathname={pathname} />
       {/* decorative floating shapes are off now that the hero has the rock;

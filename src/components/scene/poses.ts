@@ -24,6 +24,8 @@ export const NAMED: Record<string, Pose> = {
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
   // standing in front of the big sliding name
   name: { x: 0.3, y: -0.42, ry: -0.35, s: 0.8 },
+  // standing up on the big role title
+  role: { x: 0.12, y: 0.05, ry: -0.25, s: 0.62 },
   // services page: in the middle of the orbiting tool logos
   orbit: { x: 0.45, y: -0.32, ry: -0.2, s: 0.62 },
 };
@@ -69,6 +71,7 @@ const SECTION_ANIM: Record<string, AnimState> = {
   hero: "typing",
   desk: "typing",
   name: "jump",
+  role: "wave",
   orbit: "idle",
 };
 const PAGE_ANIM: Record<string, AnimState> = {

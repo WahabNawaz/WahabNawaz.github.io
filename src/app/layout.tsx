@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SceneLayer from "@/components/scene/SceneLayer";
 import Preloader from "@/components/Preloader";
+import Cursor from "@/components/Cursor";
 
 const display = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <SmoothScroll>
           <Preloader />
+          <Cursor />
           <Header />
           <SceneLayer />
           <main id="main" className="relative">
