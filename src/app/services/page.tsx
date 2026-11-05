@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
+import PoseScope from "@/components/PoseScope";
+import ToolsOrbit from "@/components/services/ToolsOrbit";
 import { Label, PageIntro } from "@/components/ui";
 import { services } from "@/content/data";
 import { lorem } from "@/content/site";
@@ -11,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <>
+    <PoseScope>
       <PageIntro label="Services" title="What I can build for you." text={lorem.sentence} />
 
       {/* Sticky jump bar */}
@@ -60,6 +62,7 @@ export default function ServicesPage() {
           </ul>
         </section>
       ))}
-    </>
+      <ToolsOrbit />
+    </PoseScope>
   );
 }

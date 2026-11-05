@@ -14,6 +14,8 @@ export const site = {
   timeZone: "Asia/Karachi",
   status: "Open for new projects",
   year: "2026",
+  // Showreel video for the Playground, e.g. "/video/showreel.mp4" (put the file in /public/video)
+  showreel: "" as string,
   socials: [
     { label: "LinkedIn", href: "https://www.linkedin.com/" },
     { label: "Instagram", href: "https://www.instagram.com/" },
@@ -28,6 +30,7 @@ export const nav = [
   { label: "Services", href: "/services/" },
   { label: "About", href: "/about/" },
   { label: "Photography", href: "/photography/" },
+  { label: "Playground", href: "/playground/" },
   { label: "FAQ", href: "/faq/" },
   { label: "Contact", href: "/contact/" },
 ];

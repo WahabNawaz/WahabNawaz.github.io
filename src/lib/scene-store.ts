@@ -6,14 +6,31 @@ import { useSyncExternalStore } from "react";
 
 export type SkyMode = "day" | "sunset" | "night";
 
+// Music-driven dance (Playground). `time` is the song position in seconds;
+// the character's dance follows it, so pause = freeze and seek = catch up.
+export type Dance = {
+  active: boolean; // a song is loaded (playing or paused)
+  playing: boolean;
+  time: number;
+  bpm: number;
+  clip: "dance1" | "dance2";
+};
+
 type State = {
   sky: SkyMode;
   scroll: number; // 0..1 progress of the current page
   section: string | null; // data-pose of the section in view (see poses.ts)
   footer: boolean; // footer is on screen
+  dance: Dance;
 };
 
-const state: State = { sky: "day", scroll: 0, section: null, footer: false };
+const state: State = {
+  sky: "day",
+  scroll: 0,
+  section: null,
+  footer: false,
+  dance: { active: false, playing: false, time: 0, bpm: 112, clip: "dance1" },
+};
 const listeners = new Set<() => void>();
 
 const SKY_KEY = "sky-mode";
@@ -28,6 +45,9 @@ export const sceneStore = {
   },
   setFooter(visible: boolean) {
     state.footer = visible;
+  },
+  setDance(patch: Partial<Dance>) {
+    Object.assign(state.dance, patch);
   },
   setSky(mode: SkyMode) {
     state.sky = mode;

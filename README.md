@@ -49,14 +49,26 @@ This creates a fully static site in `out/` (HTML, CSS, JS). Any static host can 
 
 After deploying, set `site.url` in `src/content/site.ts` to the real address (used by the sitemap and social previews).
 
-## Replace the placeholder character
+## Your own 3D character + animations
 
-1. Model or download a rigged character (Blender, or Mixamo for rigging and animations).
-2. Compress it: `npx @gltf-transform/cli optimize in.glb public/models/avatar.glb --compress meshopt`
-3. In `src/components/scene/Avatar.tsx`, load it with `useGLTF(asset("/models/avatar.glb"))` and play clips with `useAnimations`.
-   Keep the outer `<group ref={root}>`, so the poses and page-to-page moves keep working.
+Everything already works with the built-in placeholder. To use your own avatar:
 
-Use `asset()` from `src/lib/scene-store.ts` for every file in `public/` that you load from JavaScript, so paths also work under the GitHub Pages base path.
+1. **Avatar**: make one from a selfie at avaturn.me and download the GLB.
+2. **Rig + animations**: upload it to mixamo.com (free Adobe login). Download these animations as FBX
+   (tick **In Place** for jump/walk): Idle, Typing, Jump, Waving, Sitting, Pushing, and two dances.
+3. **Convert** each FBX to GLB (Blender: File → Import → FBX, then File → Export → glTF Binary),
+   then compress: `npx @gltf-transform/cli optimize in.glb out.glb --compress meshopt`.
+4. Put them in `public/models/` using the names in `src/content/avatar.ts`
+   (`avatar.glb`, `anim/idle.glb`, `anim/typing.glb`, …) and set `enabled: true`.
+
+Which animation plays where (hero = typing, big name = jump, footer/contact = wave, Playground = dance)
+is set in `animFor()` in `src/components/scene/poses.ts`.
+
+## Playground music
+
+`src/content/music.ts` lists the songs. The "Demo beat" is generated in the browser. Add tracks you have
+the rights to (for example free tracks from pixabay.com/music) as MP3s in `public/audio/` with their BPM.
+The showreel video path goes in `site.showreel` (`src/content/site.ts`).
 
 ## Contact form
 

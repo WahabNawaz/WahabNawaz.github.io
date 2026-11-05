@@ -9,6 +9,8 @@
 //    <PoseScope>. While that section is in the middle of the screen, the
 //    character moves to that pose. The home page works this way.
 
+import type { AnimState } from "@/content/avatar";
+
 export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
@@ -19,6 +21,8 @@ export const NAMED: Record<string, Pose> = {
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
   // standing in front of the big sliding name
   name: { x: 0.3, y: -0.55, ry: -0.35, s: 0.75 },
+  // services page: in the middle of the orbiting tool logos
+  orbit: { x: 0.45, y: -0.32, ry: -0.2, s: 0.62 },
 };
 
 const PAGES: Record<string, Pose> = {
@@ -28,6 +32,7 @@ const PAGES: Record<string, Pose> = {
   "/faq": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
   "/photography": { x: 0.74, y: -0.55, ry: -0.5, s: 0.5 },
   "/contact": { x: 0.0, y: -0.42, ry: 0.0, s: 0.95 },
+  "/playground": { x: 0.0, y: -0.38, ry: 0.0, s: 1.15 },
 };
 
 const CASE_STUDY: Pose = { x: 0.78, y: -0.62, ry: -0.6, s: 0.42 };
@@ -47,10 +52,37 @@ export function poseFor(pathname: string, section: string | null, mobile: boolea
   if (mobile) {
     if (section === "hero") return MOBILE_HERO;
     if (path === "/contact") return { ...PAGES["/contact"], s: 0.6 };
+    if (path === "/playground") return { x: 0, y: -0.3, ry: 0, s: 0.75 };
     return MOBILE_CORNER;
   }
   if (section && NAMED[section]) return NAMED[section];
   if (PAGES[path]) return PAGES[path];
   if (path.startsWith("/work/")) return CASE_STUDY;
   return FALLBACK;
+}
+
+// Which animation the character plays where. Names match src/content/avatar.ts.
+const SECTION_ANIM: Record<string, AnimState> = {
+  hero: "typing",
+  name: "jump",
+  orbit: "idle",
+};
+const PAGE_ANIM: Record<string, AnimState> = {
+  "/contact": "wave",
+  "/playground": "idle",
+  "/about": "sit",
+};
+
+export function animFor(
+  pathname: string,
+  section: string | null,
+  footer: boolean,
+  dance: { active: boolean; clip: AnimState },
+): AnimState {
+  const path = pathname.replace(/\/$/, "") || "/";
+  if (path === "/playground" && dance.active) return dance.clip;
+  if (footer) return "wave";
+  if (section && SECTION_ANIM[section]) return SECTION_ANIM[section];
+  if (PAGE_ANIM[path]) return PAGE_ANIM[path];
+  return "typing";
 }

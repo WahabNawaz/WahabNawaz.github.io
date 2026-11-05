@@ -19,13 +19,15 @@ export default function PoseScope({ children }: { children: React.ReactNode }) {
       const sections = gsap.utils.toArray<HTMLElement>("[data-pose]", ref.current);
       if (!sections.length) return;
 
+      // Before the first posed section is reached, no section pose applies
+      // (the page's own pose from poses.ts is used).
       const update = () => {
         const line = window.innerHeight * 0.55;
-        let active = sections[0];
+        let active: HTMLElement | null = null;
         for (const el of sections) {
           if (el.getBoundingClientRect().top <= line) active = el;
         }
-        sceneStore.setSection(active.dataset.pose ?? null);
+        sceneStore.setSection(active?.dataset.pose ?? null);
       };
 
       ScrollTrigger.create({
