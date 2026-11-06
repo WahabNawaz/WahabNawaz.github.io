@@ -15,7 +15,9 @@ export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
   // sitting on the floating rock, centre-left, under the centred headline
-  hero: { x: -0.28, y: -0.16, ry: -0.8, s: 1.15 },
+  // sitting on the bronze hand's index finger (the spot comes from the hand,
+  // see HeroHands.tsx; x and y here are only used before the hand is ready)
+  hero: { x: -0.2, y: -0.2, ry: -0.65, s: 1.1 },
   // seated at the desk (pitch section)
   desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
@@ -48,7 +50,7 @@ const FALLBACK: Pose = { x: 0.0, y: -0.3, ry: 0.0, s: 0.85 };
 // Phones: the character stays small in a corner so it never covers text.
 const MOBILE_CORNER: Pose = { x: 0.62, y: -0.78, ry: -0.5, s: 0.3 };
 // between the headline and the buttons
-const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.0, s: 0.56 };
+const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: -0.55, s: 0.56 };
 
 // Footer text sits on the left, so the character moves right when it shows.
 const FOOTER: Pose = { x: 0.8, y: -0.3, ry: -0.5, s: 0.7 };

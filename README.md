@@ -96,10 +96,11 @@ Clip names and which animation plays where:
 ### Hero hands and the opening
 
 Two huge sculpted hands in the spirit of Michelangelo's *Creation of Adam* (public domain), built in 3D for
-this site: dark old bronze with a green patina (a shader) and ivy wound round the forearms. The left hand comes
-in from the lower left, palm down; the character walks in from the left once the preloader lifts and sits
-down on its knuckles with the laptop. The right hand comes down from the top right and reaches towards him,
-its finger turning a little towards the mouse. Model: the WebXR *generic hand* (`@webxr-input-profiles/assets`,
+this site: dark old bronze with a green patina (a shader) and ivy wound round the forearms; both the same size
+(about three quarters of the screen height). The left hand rises in from the lower left, palm down; once the
+preloader lifts the character drops in from above, lands on its index finger, finds his feet and sits down
+there with the laptop. The right hand comes down from the top right and reaches towards him, its finger
+turning a little towards the mouse. Model: the WebXR *generic hand* (`@webxr-input-profiles/assets`,
 MIT, © 2019 Amazon), posed joint by joint in code, with a forearm added so the arm runs off screen
 (`src/components/scene/HeroHands.tsx`).
 

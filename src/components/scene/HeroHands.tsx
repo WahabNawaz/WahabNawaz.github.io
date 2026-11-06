@@ -3,10 +3,9 @@
 // Two huge sculpted hands in the home hero, in the spirit of Michelangelo's
 // "Creation of Adam" (public domain), made in 3D for this site (no photos):
 // - <SeatHand>: a left hand coming in from the lower left, palm down, index
-//   finger reaching right. The character sits on its knuckles. It is placed
-//   from the hero seat spot (heroSeat.ts), so it holds still while the
-//   character walks over to it, rises in after the preloader and sinks away
-//   when the page scrolls on.
+//   finger reaching right. It rises in after the preloader; the character
+//   drops from above, lands on its index finger and sits there (the hand
+//   reports the finger's position through heroSeat.ts).
 // - <ReachingHand>: a right hand coming down from the top right, index finger
 //   reaching towards the character and turning a little towards the mouse.
 // Look: dark old bronze with a green patina on the upper surfaces, and ivy
@@ -105,15 +104,15 @@ function makeBronze(scale: { value: number }) {
           vec3 p = vPatPos * uPatinaScale;
           float n = pNoise(p * 70.0) * 0.55 + pNoise(p * 160.0) * 0.3 + pNoise(p * 420.0) * 0.15;
           float up = smoothstep(-0.1, 0.75, normalize(vPatN).y);
-          return smoothstep(0.5, 0.78, n * (0.5 + 0.55 * up));
+          return smoothstep(0.56, 0.82, n * (0.48 + 0.5 * up));
         }`,
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
         float pat = patinaAmount();
-        vec3 verdigris = mix(vec3(0.11, 0.17, 0.10), vec3(0.24, 0.33, 0.20), pNoise(vPatPos * uPatinaScale * 240.0));
-        diffuseColor.rgb = mix(diffuseColor.rgb, verdigris, pat * 0.8);`,
+        vec3 verdigris = mix(vec3(0.09, 0.13, 0.08), vec3(0.18, 0.25, 0.15), pNoise(vPatPos * uPatinaScale * 240.0));
+        diffuseColor.rgb = mix(diffuseColor.rgb, verdigris, pat * 0.7);`,
       )
       .replace(
         "#include <roughnessmap_fragment>",
@@ -281,12 +280,18 @@ function useHand(side: "left" | "right") {
   return useMemo(() => buildRig(scene, side === "left" ? 7 : 3), [scene, side]);
 }
 
-/** Hand size next to the 2-unit-tall character (the file is ~0.22 long). */
-export const SEAT_SCALE = 9.5;
+/** Both hands: wrist to fingertip as a share of the screen height. */
+const HAND_LEN = 0.76;
+const handLength = (w: number, h: number) => Math.min(h * HAND_LEN, w * 1.05); // phones: stay on screen
 
-const _seat = new THREE.Vector3();
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
 
-/** Left hand the character sits on, in the home hero. */
+/**
+ * Left hand the character lands and sits on, in the home hero. It comes in
+ * from the lower left (wrist at the screen edge), rises up once the preloader
+ * lifts, and tells the character where the top of its index finger is.
+ */
 export function SeatHand() {
   const rig = useHand("left");
   const turn = useRef<THREE.Group>(null);
@@ -296,29 +301,38 @@ export function SeatHand() {
     const g = turn.current;
     if (!g) return;
     const on = heroSeat.active && isIntroDone() ? 1 : 0;
-    shown.current += (on - shown.current) * (1 - Math.exp(-dt * (on ? 1.8 : 4)));
+    shown.current += (on - shown.current) * (1 - Math.exp(-dt * (on ? 2.2 : 4)));
     const r = shown.current;
     g.visible = r > 0.005;
+    heroSeat.ready = r > 0.6;
     if (!g.visible) return;
-    poseRig(rig, RESTING, clock.elapsedTime, 1);
+    poseRig(rig, RESTING, clock.elapsedTime, 0.6);
     updatePatina(rig);
-    // under the seated hips: the seat offset turned with the character's
-    // seated facing, scaled like the character; rises up from below
-    const { x, y, s, ry, hipY, hipZ } = heroSeat;
-    _seat.set(0, hipY - 0.25, hipZ - 0.42).applyAxisAngle(THREE.Object3D.DEFAULT_UP, ry).multiplyScalar(s);
-    g.position.set(x + _seat.x - 0.5 * s, y + _seat.y - (1 - r) * viewport.height * 0.6, _seat.z);
-    g.scale.setScalar(s);
+    const h = viewport.height;
+    const w = viewport.width;
+    const L = handLength(w, h);
+    g.scale.setScalar(L);
+    const lift = viewport.aspect < 0.8 ? 0.36 : 0.27; // phones: clear of the sky switch
+    g.position.set(-w / 2 + w * 0.1, -h / 2 + h * lift - (1 - r) * h * 0.7, 0);
+    // the seat: along the index finger, on its upper surface
+    g.updateMatrixWorld(true);
+    rig.bones["index-finger-phalanx-proximal"].getWorldPosition(_a);
+    rig.bones["index-finger-phalanx-intermediate"].getWorldPosition(_b);
+    _a.lerp(_b, 0.45);
+    heroSeat.fx = _a.x;
+    heroSeat.fy = _a.y + (0.0095 / 0.22) * L; // half the finger's thickness
+    heroSeat.fz = _a.z;
   });
 
   // palm down, fingers to the right and a little up, the arm leaving the frame
-  // on the lower left; the origin is the back of the hand by the knuckles
+  // on the left; the origin is the wrist
   return (
     <group ref={turn} visible={false}>
-      <group rotation={[0, 0, 14 * D]}>
-        <group rotation={[0, -24 * D, 0]}>
+      <group rotation={[0, 0, 13 * D]}>
+        <group rotation={[0, -22 * D, 0]}>
           <group rotation={[0, 180 * D, 0]}>
-            <group rotation={[0, 0, -90 * D]} scale={SEAT_SCALE}>
-              <primitive object={rig.root} position={rig.knuckles.clone().negate()} />
+            <group rotation={[0, 0, -90 * D]} scale={1 / 0.22}>
+              <primitive object={rig.root} position={rig.wrist.clone().negate()} />
             </group>
           </group>
         </group>
@@ -328,8 +342,7 @@ export function SeatHand() {
 }
 
 const _wrist = new THREE.Vector3();
-const TILT = 0.62; // radians below horizontal (the hand points down-left)
-const REACH_SIZE = 0.66; // hand length as a share of the screen height
+const TILT = 0.55; // radians below horizontal (the hand points down-left)
 
 /** Right hand coming down from the top right, reaching towards the character. */
 export function ReachingHand() {
@@ -362,12 +375,13 @@ export function ReachingHand() {
     updatePatina(rig);
     const h = viewport.height;
     const w = viewport.width;
-    // wrist just past the top-right corner; slides in along its own arm
-    g.scale.setScalar(h);
+    // same size as the seat hand; wrist just past the top-right corner, slides
+    // in along its own arm
+    g.scale.setScalar(handLength(w, h));
     const back = (1 - s) * h * 0.8;
     g.position.set(
-      w / 2 + h * 0.06 + back * Math.cos(TILT) + pointer.x * 0.12,
-      h / 2 + h * 0.02 + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08,
+      w / 2 + h * 0.02 + back * Math.cos(TILT) + pointer.x * 0.12,
+      h / 2 - h * 0.12 + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08,
       0.5,
     );
     // the finger turns a little towards the mouse
@@ -384,7 +398,7 @@ export function ReachingHand() {
     <group ref={group} visible={false}>
       <group ref={aim} rotation={[0, 0, TILT]}>
         <group rotation={[-20 * D, 0, 0]}>
-          <group rotation={[180 * D, 0, -90 * D]} scale={REACH_SIZE / 0.22}>
+          <group rotation={[180 * D, 0, -90 * D]} scale={1 / 0.22}>
             <primitive object={rig.root} position={rig.wrist.clone().negate()} />
           </group>
         </group>

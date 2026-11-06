@@ -338,10 +338,12 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
-  // Opening: on the home page the character walks in from the left once the
-  // preloader lifts (along the big bronze arm), then sits down on the hand.
-  // "wait" = still off screen.
-  const entrance = useRef<"wait" | "walk" | "done">("done");
+  // Opening: on the home page, once the preloader lifts and the big bronze hand
+  // has risen, the character drops in from above, lands on its index finger,
+  // finds his feet and sits down there. "wait" = still above the screen.
+  const entrance = useRef<"wait" | "drop" | "land" | "done">("done");
+  const phase = useRef({ t: 0, from: 0 });
+  const seated = useRef(0); // eased like the sit-down clip, for the seat height
   const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
   const place = useRef<string>("");
 
@@ -365,70 +367,93 @@ export default function Avatar({ pathname }: { pathname: string }) {
             ? "shelf"
             : "";
 
-    // the big hand in the hero is placed from the hero spot, not from where the
-    // character is right now
-    const heroPose = poseFor(pathname, "hero", mobile, false);
     heroSeat.active = path === "/" && !footer && (section === "hero" || !section);
-    heroSeat.x = (heroPose.x * viewport.width) / 2;
-    heroSeat.y = (heroPose.y * viewport.height) / 2;
-    heroSeat.s = (heroPose.s * viewport.height) / 5;
-    heroSeat.ry = heroPose.ry;
     heroSeat.hipY = seat.current.hipY;
     heroSeat.hipZ = seat.current.hipZ;
 
     // ease towards the target pose (also animates page-to-page moves)
     const k = 1 - Math.exp(-dt * 3.2);
-    const tx = (pose.x * viewport.width) / 2;
-    const ty = (pose.y * viewport.height) / 2;
+    let tx = (pose.x * viewport.width) / 2;
+    let ty = (pose.y * viewport.height) / 2;
+    let tz = 0;
     const ts = (pose.s * viewport.height) / 5;
-    // first frame: on the home hero, wait off screen for the walk-in;
+    // In the hero the spot is the top of the bronze hand's index finger:
+    // standing = feet on the finger; seated = the seat of the trousers on it,
+    // legs hanging in front. `seated` follows the sit-down clip's pace.
+    seated.current += (seat.current.w - seated.current) * (1 - Math.exp(-dt * 1.7));
+    const onFinger = heroSeat.active && heroSeat.ready;
+    const standY = heroSeat.fy + 1.05 * ts;
+    if (onFinger) {
+      const sitY = heroSeat.fy + (0.1 - seat.current.hipY) * ts;
+      const back = seat.current.hipZ * ts; // the hips sit a little behind the feet line
+      tx = heroSeat.fx - Math.sin(pose.ry) * back;
+      tz = heroSeat.fz - Math.cos(pose.ry) * back;
+      ty = standY + (sitY - standY) * seated.current;
+    }
+    // first frame: on the home hero, wait above the screen for the drop;
     // anywhere else appear in place (only the size animates in)
     if (!placed.current) {
       placed.current = true;
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (path === "/" && section !== "desk" && !footer && !reduce) {
         entrance.current = "wait";
-        g.position.set(-viewport.width / 2 - ts * 0.8, ty, 0);
-        g.rotation.y = Math.PI / 2;
+        g.position.set(tx, viewport.height / 2 + ts * 2.6, tz);
+        g.rotation.y = 0;
         g.scale.setScalar(ts);
       } else {
-        g.position.set(tx, ty, 0);
+        g.position.set(tx, ty, tz);
         g.rotation.y = pose.ry;
       }
     }
 
     if (entrance.current !== "done") {
+      const ph = phase.current;
       // scrolled away or left the page mid-entrance: carry on as normal
       if (path !== "/" || (section && section !== "hero") || footer) entrance.current = "done";
       else if (entrance.current === "wait") {
         anim.current = "idle";
-        if (isIntroDone() && ready.current) entrance.current = "walk";
+        g.position.x = tx;
+        g.position.z = tz;
+        if (isIntroDone() && ready.current && onFinger) {
+          entrance.current = "drop";
+          ph.t = 0;
+          ph.from = g.position.y;
+        }
+        return;
+      } else if (entrance.current === "drop") {
+        // falling, faster and faster, onto the finger
+        ph.t += dt;
+        const p = Math.min(1, ph.t / 0.9);
+        anim.current = "jump";
+        g.scale.setScalar(ts);
+        g.position.set(tx, ph.from + (standY - ph.from) * p * p, tz);
+        g.rotation.y += (0 - g.rotation.y) * (1 - Math.exp(-dt * 6));
+        if (p >= 1) {
+          entrance.current = "land";
+          ph.t = 0;
+        }
         return;
       } else {
-        const dx = tx - g.position.x;
-        const step = ts * 1.75 * dt; // walking pace, scaled with the character
-        anim.current = "walk";
-        g.scale.setScalar(ts);
-        g.position.y = ty;
-        if (Math.abs(dx) <= step) {
-          g.position.x = tx;
-          entrance.current = "done";
-        } else {
-          g.position.x += Math.sign(dx) * step;
-          g.rotation.y += (Math.sign(dx) * (Math.PI / 2) - g.rotation.y) * (1 - Math.exp(-dt * 8));
-          return;
-        }
+        // a short dip on landing, then he finds his feet
+        ph.t += dt;
+        anim.current = "idle";
+        const dip = Math.sin(Math.min(1, ph.t / 0.35) * Math.PI) * ts * 0.08;
+        g.position.set(tx, standY - dip, tz);
+        if (ph.t < 0.55) return;
+        entrance.current = "done";
       }
     }
     // Travelling to a new spot: run, face the way it goes and jump in an arc.
     const dx = tx - g.position.x;
     const dist = Math.hypot(dx, ty - g.position.y);
-    const travelling = dist > viewport.height * 0.06 && !(dance.active && path === "/playground");
+    // (not while settling onto the finger: that is a sit-down, not a trip)
+    const travelling = dist > viewport.height * 0.06 && !(dance.active && path === "/playground") && !(onFinger && Math.abs(dx) < viewport.width * 0.04);
     if (travelling) anim.current = "run";
     const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : pose.ry + pointer.x * 0.15;
 
     g.position.x += dx * k;
     g.position.y += (ty - g.position.y) * k;
+    g.position.z += (tz - g.position.z) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
     if (hop.current) {
