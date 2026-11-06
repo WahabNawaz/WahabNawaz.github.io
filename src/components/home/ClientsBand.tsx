@@ -2,8 +2,8 @@
 
 // "In good company": dark section with three rows of client names drifting
 // in alternating directions (swap the names for logo images later). The 3D
-// character walks in among them and trips near the bottom: "Oops!" pops up
-// while he falls (poses.ts, section "clients").
+// character walks in among them and trips on the section's bottom edge:
+// "Oops!" pops up by the edge while he tumbles over it (poses.ts edgePose).
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -41,15 +41,14 @@ export default function ClientsBand() {
   useGSAP(
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      // matches the trip in poses.ts: pops when he stumbles, fades as he
-      // falls; meanwhile it moves down as fast as the page scrolls up, so it
-      // stays next to him on screen
+      // matches edgePose in poses.ts: pops when he stumbles (the edge is at
+      // 80% of the screen), fades once he hangs at the top
       const oops = "[data-oops]";
       gsap
-        .timeline({ scrollTrigger: { trigger: root.current, start: "bottom 105%", end: "bottom 50%", scrub: 0.3, invalidateOnRefresh: true } })
-        .fromTo(oops, { y: 0 }, { y: () => innerHeight * 0.55, duration: 1, ease: "none" }, 0)
-        .fromTo(oops, { autoAlpha: 0, scale: 0.4, rotate: -14 }, { autoAlpha: 1, scale: 1, rotate: -4, duration: 0.12, ease: "back.out(3)" }, 0.02)
-        .to(oops, { autoAlpha: 0, duration: 0.12 }, 0.86);
+        .timeline({ scrollTrigger: { trigger: root.current, start: "bottom 80%", end: "bottom 12%", scrub: 0.3 } })
+        .fromTo(oops, { autoAlpha: 0, scale: 0.4, rotate: -14 }, { autoAlpha: 1, scale: 1, rotate: -4, duration: 0.12, ease: "back.out(3)" }, 0)
+        .to(oops, { y: -20, duration: 0.7, ease: "none" }, 0.12)
+        .to(oops, { autoAlpha: 0, duration: 0.15 }, 0.85);
     },
     { scope: root },
   );
@@ -74,7 +73,7 @@ export default function ClientsBand() {
       <p
         data-oops
         aria-hidden
-        className="invisible absolute bottom-[41%] left-[66%] font-display text-6xl font-normal tracking-tight text-paper md:text-7xl"
+        className="invisible absolute bottom-[16svh] left-[42%] font-display text-6xl font-normal tracking-tight text-paper md:text-7xl"
       >
         Oops!
       </p>

@@ -1,9 +1,12 @@
 "use client";
 
-// "How a project runs", like the reference: each step is a short text on one
-// side and a picture on the other (they swap sides every step), joined by a
-// thin curving line that draws itself as you scroll (stroke-dashoffset, GSAP
-// scrub). Pictures are the placeholder covers until real ones are added.
+// "How a project runs", like the reference: a heading with a short note on
+// the right, then one step per screen. Each step has its text on one side,
+// next to the middle, and a wide picture on the other side that runs to the
+// edge of the screen; they swap sides every step. A thin line snakes down
+// through the middle and draws itself as you scroll (stroke-dashoffset,
+// GSAP scrub). Pictures are the placeholder covers until real ones (or
+// videos) are added. The 3D character stays out of sight here (poses.ts).
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -14,8 +17,8 @@ import { lorem } from "@/content/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-// a loose S-curve down the gap between text and pictures (viewBox 100 x 1000, stretched)
-const PATH = "M 50 0 C 50 90, 54 160, 54 250 S 46 400, 46 500 S 54 650, 54 750 S 50 920, 50 1000";
+// down the middle, bending into the text side of each step (viewBox 100 x 1000, stretched)
+const PATH = "M 52 0 C 52 60, 40 90, 40 160 S 58 300, 60 380 S 40 520, 40 620 S 60 760, 60 860 S 50 960, 50 1000";
 
 export default function ProcessStack() {
   const root = useRef<HTMLElement>(null);
@@ -34,45 +37,59 @@ export default function ProcessStack() {
       gsap.to(path, {
         strokeDashoffset: 0,
         ease: "none",
-        scrollTrigger: { trigger: "[data-steps]", start: "top 70%", end: "bottom 60%", scrub: 0.5 },
+        scrollTrigger: { trigger: "[data-steps]", start: "top 60%", end: "bottom 70%", scrub: 0.5 },
       });
       gsap.utils.toArray<HTMLElement>("[data-step]", root.current).forEach((el) => {
-        gsap.from(el, {
+        gsap.from(el.querySelector("[data-step-text]"), {
           y: 40,
           autoAlpha: 0,
           duration: 0.9,
           ease: "power3.out",
-          scrollTrigger: { trigger: el, start: "top 80%", once: true },
+          scrollTrigger: { trigger: el, start: "top 65%", once: true },
         });
+        // the picture eases out of a slight zoom as it scrolls through
+        gsap.fromTo(
+          el.querySelector("[data-step-media]"),
+          { scale: 1.15 },
+          { scale: 1, ease: "none", scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true } },
+        );
       });
     },
     { scope: root },
   );
 
   return (
-    <section ref={root} data-pose="process" className="px-5 py-32 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-8">
-        <h2 className="max-w-xl font-display text-5xl font-normal leading-[0.95] tracking-tight md:text-6xl">How a project runs</h2>
-        <p className="max-w-xs text-right text-xs leading-relaxed text-ink/70">{lorem.sentence}</p>
+    <section ref={root} data-pose="process" className="overflow-hidden px-5 pb-24 pt-32 md:px-8 md:pb-10">
+      <div className="flex flex-wrap items-start justify-between gap-8">
+        <h2 className="font-display text-5xl font-normal leading-[1.05] tracking-tight md:text-[3.9vw]">How a project runs</h2>
+        <p className="max-w-[20rem] text-xs font-medium leading-snug md:text-right">{lorem.sentence}</p>
       </div>
 
-      <div data-steps className="relative mt-20">
-        <svg aria-hidden className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" viewBox="0 0 100 1000" preserveAspectRatio="none">
-          <path ref={line} data-process-path d={PATH} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" className="text-ink/70" />
+      <div data-steps className="relative mt-16">
+        <svg aria-hidden className="pointer-events-none absolute inset-0 z-10 hidden h-full w-full md:block" viewBox="0 0 100 1000" preserveAspectRatio="none">
+          <path ref={line} data-process-path d={PATH} fill="none" stroke="currentColor" strokeWidth="1.2" vectorEffect="non-scaling-stroke" className="text-ink" />
         </svg>
-        <ol className="relative grid gap-24 md:gap-0">
-          {process.map((p, i) => (
-            <li key={p.step} data-step className="grid items-center gap-8 md:min-h-[72svh] md:grid-cols-2 md:gap-[10%] md:px-[4%]">
-              <div className={`max-w-sm ${i % 2 ? "md:order-2" : "md:justify-self-end md:text-right"}`}>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                  Step {p.step} · {p.title}
-                </span>
-                <h3 className="mt-3 font-display text-4xl font-normal leading-tight tracking-tight">{lorem.short}</h3>
-                <p className="mt-3 text-xs leading-relaxed text-ink/70">{p.text}</p>
-              </div>
-              <Cover project={projects[i % projects.length]} className={`aspect-[4/3] w-full rounded-sm shadow-xl ${i % 2 ? "md:order-1" : ""}`} />
-            </li>
-          ))}
+        <ol className="relative grid gap-20 md:gap-0">
+          {process.map((p, i) => {
+            const mediaLeft = i % 2 === 1;
+            return (
+              <li key={p.step} data-step className="grid items-center gap-8 md:min-h-[117svh] md:grid-cols-2 md:gap-[2vw] md:last:min-h-[50svh]">
+                <div data-step-text className={mediaLeft ? "md:order-2" : "md:justify-self-end md:text-right"}>
+                  <span className="font-mono text-[10px] uppercase tracking-widest">
+                    Step {p.step} · {p.title}
+                  </span>
+                  <h3 className="mt-3 font-display text-5xl font-normal leading-[1.05] tracking-tight md:text-[3.9vw]">{lorem.short}</h3>
+                  <p className={`mt-4 max-w-[23rem] text-[13px] font-medium leading-snug ${mediaLeft ? "" : "md:ml-auto"}`}>{p.text}</p>
+                </div>
+                {/* runs to the edge of the screen */}
+                <div className={`overflow-hidden ${mediaLeft ? "md:order-1 md:-ml-8" : "md:-mr-8"}`}>
+                  <div data-step-media>
+                    <Cover project={projects[i % projects.length]} className="aspect-[16/9] w-full" />
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ol>
       </div>
     </section>

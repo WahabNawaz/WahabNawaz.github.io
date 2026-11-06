@@ -132,3 +132,44 @@ export function lookTowards(bones: SitBones, root: THREE.Object3D, yaw: number, 
     rotateWorld(bone, _up, yaw * part);
   }
 }
+
+const _p0 = new THREE.Vector3();
+const _p1 = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _want = new THREE.Vector3();
+const _aim = new THREE.Quaternion();
+const _wq = new THREE.Quaternion();
+
+/** Swing a bone (in world space) so the line to its child points along `to`, by weight w. */
+function aimAt(bone: THREE.Bone | undefined, to: THREE.Vector3, w: number) {
+  const child = bone?.children.find((c) => (c as THREE.Bone).isBone);
+  if (!bone || !bone.parent || !child || w <= 0.001) return;
+  bone.updateWorldMatrix(true, true);
+  bone.getWorldPosition(_p0);
+  child.getWorldPosition(_p1);
+  _dir.subVectors(_p1, _p0).normalize();
+  _aim.setFromUnitVectors(_dir, to);
+  bone.getWorldQuaternion(_wq);
+  bone.parent.getWorldQuaternion(_pq);
+  // new local = parentWorld⁻¹ · aim · world
+  _rot.copy(_aim).multiply(_wq);
+  _pq.invert().multiply(_rot);
+  bone.quaternion.slerp(_pq, w);
+}
+
+/**
+ * Arms hanging straight down with gravity, whatever way up the body is (he
+ * hangs upside down from the top of the screen in the services section).
+ * `sway` swings them a little left/right.
+ */
+export function dangleArms(bones: SitBones, w: number, sway: number) {
+  if (w <= 0.001) return;
+  for (const [upper, lower, side] of [
+    [bones.upperArmL, bones.lowerArmL, -1],
+    [bones.upperArmR, bones.lowerArmR, 1],
+  ] as const) {
+    _want.set(side * 0.12 + sway, -1, 0.08).normalize();
+    aimAt(upper, _want, w);
+    aimAt(lower, _want, w);
+  }
+}

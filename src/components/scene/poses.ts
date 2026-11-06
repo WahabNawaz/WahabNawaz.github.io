@@ -32,12 +32,12 @@ export const NAMED: Record<string, Pose> = {
   // these are only the resting spots
   work: { x: 0.7, y: -0.4, ry: -0.5, s: 0.6 },
   band: { x: 0.3, y: -0.4, ry: 1.2, s: 0.66 },
-  // services list and the showcase after it: hanging from the top-left edge
-  // of the screen, only his legs show, swinging a little (Avatar.tsx)
-  services: { x: -0.74, y: 1.0, ry: 0.35, s: 0.9 },
-  brand: { x: -0.74, y: 1.0, ry: 0.35, s: 0.9 },
-  // process: he has climbed out of sight (back for the footer)
-  process: { x: -0.74, y: 2.2, ry: 0.35, s: 0.9 },
+  // services: hanging upside down from the top-left edge (the real spot,
+  // roll and arms come from edgePose below); showcase: gone up out of sight;
+  // process: out of sight below the footer
+  services: { x: -0.72, y: 1.12, ry: 0.4, s: 1.2 },
+  brand: { x: -0.72, y: 2.2, ry: 0.4, s: 1.2 },
+  process: { x: 0.74, y: -1.8, ry: -0.35, s: 1.4 },
   clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
   // standing in the middle of the big role title, on its own shadow
   role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
@@ -127,11 +127,13 @@ export function animFor(
  * - band: dives off the role title down past the band;
  * - work: out of sight while the black circle opens, then dives over the
  *   pinned WORK title from left to right and is gone again for the projects;
- * - clients: walks in among the logos, trips ("Oops!") and falls.
+ * (clients, services, showcase and footer: see edgePose, risePose, footerPose)
  * roll turns him in the screen plane (+ = anticlockwise); hide = not drawn
  * (he jumps there at once instead of flying across the screen).
  */
-export function scrollPose(section: string | null, p: number): (Pose & { roll: number; anim?: AnimState; hide?: boolean }) | null {
+export type ScrollPose = Pose & { roll: number; anim?: AnimState; hide?: boolean; dangle?: number };
+
+export function scrollPose(section: string | null, p: number): ScrollPose | null {
   const c = Math.min(1, Math.max(0, p));
   if (section === "name") {
     // walks off to the left, comes back pushing the floating desk across while
@@ -156,20 +158,64 @@ export function scrollPose(section: string | null, p: number): (Pose & { roll: n
     }
     return { x: 1.8, y: 0.3, ry: 1.25, s: 1.0, roll: -1.6, anim: "jump", hide: true };
   }
-  if (section === "clients") {
-    if (c < 0.26) return { x: 1.25, y: -0.52, ry: -0.8, s: 0.62, roll: 0, anim: "walk", hide: true };
-    if (c < 0.5) {
-      const k = (c - 0.26) / 0.24;
-      return { x: 1.15 - k * 0.9, y: -0.52, ry: -0.8, s: 0.62, roll: 0, anim: "walk" };
-    }
-    if (c < 0.56) {
-      // the stumble
-      const k = (c - 0.5) / 0.06;
-      return { x: 0.25 - k * 0.1, y: -0.52 + k * 0.1, ry: -1.0, s: 0.62, roll: k * 0.55, anim: "jump" };
-    }
-    // and down he goes, head first to the left
-    const k = Math.min(1, (c - 0.56) / 0.18);
-    return { x: 0.15 - k * 0.6, y: -0.42 + Math.sin(k * Math.PI) * 0.18 - k * 0.2, ry: -1.1, s: 0.62, roll: 0.55 + k * 1.25, anim: "jump" };
-  }
   return null;
+}
+
+const mix = (a: number, b: number, k: number) => a + (b - a) * k;
+const smooth = (k: number) => k * k * (3 - 2 * k);
+// screen fraction from the top (0 = top edge, 1 = bottom) -> pose y
+const yAt = (frac: number) => 1 - 2 * frac;
+// hanging upside down from the top-left, just under the header strip
+const HANG = { x: -0.72, hips: -0.06, ry: 0.4, s: 1.2, roll: 2.8 };
+
+/**
+ * Clients -> services, like the reference. `edge` is where the bottom edge
+ * of the dark clients section is on screen (0 = top, 1 = bottom of the
+ * screen, more = still below). He walks in among the logos, trips near that
+ * edge ("Oops!"), tumbles over it as the white services section scrolls up,
+ * and ends up hanging upside down from the top-left, arms dangling.
+ */
+export function edgePose(edge: number, t: number): ScrollPose {
+  if (edge > 1.85) return { x: 1.2, y: yAt(0.5), ry: -0.55, s: 1.15, roll: 0, anim: "walk", hide: true };
+  if (edge > 0.8) {
+    const k = (1.85 - edge) / 1.05;
+    return { x: mix(1.15, 0.1, k), y: yAt(0.5), ry: -0.55, s: 1.15, roll: 0, anim: "walk" };
+  }
+  if (edge > 0.65) {
+    // the stumble: the edge has reached his feet
+    const k = (0.8 - edge) / 0.15;
+    return { x: mix(0.1, 0.02, k), y: yAt(edge - 0.3), ry: mix(-0.55, -0.9, k), s: 1.15, roll: k * 0.5, anim: "jump" };
+  }
+  if (edge > 0.16) {
+    // over the edge, head first, turning upside down on the way up
+    const k = smooth((0.65 - edge) / 0.49);
+    return {
+      x: mix(0.02, HANG.x, k),
+      y: yAt(edge - 0.3 + k * 0.08),
+      ry: mix(-0.9, HANG.ry, k),
+      s: mix(1.15, HANG.s, k),
+      roll: mix(0.5, HANG.roll, k),
+      anim: "jump",
+      dangle: k,
+    };
+  }
+  return { x: HANG.x, y: yAt(HANG.hips), ry: HANG.ry, s: HANG.s, roll: HANG.roll + Math.sin(t * 1.2) * 0.05, anim: "idle", dangle: 1 };
+}
+
+/**
+ * Showcase after the services: he lets go upwards and is gone. `top` = the
+ * showcase's top edge on screen (0..1 from the top).
+ */
+export function risePose(top: number): ScrollPose {
+  const k = Math.min(1, Math.max(0, (0.5 - top) / 0.5));
+  const hidden = top < 0;
+  return { x: HANG.x, y: yAt(HANG.hips - k * 0.5), ry: HANG.ry, s: HANG.s, roll: HANG.roll, anim: "idle", dangle: 1, hide: hidden };
+}
+
+/**
+ * Footer: standing on the right, big, moving up with the footer as it
+ * scrolls in (`top` = the footer's top edge on screen, 0..1 from the top).
+ */
+export function footerPose(top: number): ScrollPose {
+  return { x: 0.74, y: yAt(top + 0.36), ry: -0.35, s: 1.4, roll: 0, anim: "idle" };
 }

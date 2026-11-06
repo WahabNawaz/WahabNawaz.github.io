@@ -16,7 +16,7 @@ import { asset, sceneStore } from "@/lib/scene-store";
 import { avatar, type AnimState, type Clip } from "@/content/avatar";
 import type { AnimRef } from "./Avatar";
 import { pointer } from "./pointer";
-import { applySit, bindQuats, findSitBones, lookTowards, typingTap } from "./sitPose";
+import { applySit, bindQuats, dangleArms, findSitBones, lookTowards, typingTap } from "./sitPose";
 import { addGlasses } from "./glasses";
 
 const ENTRIES = Object.entries(avatar.clips) as [AnimState, Clip][];
@@ -140,7 +140,16 @@ const _ndc = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _f = new THREE.Vector3();
 
-export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (seat: Seat) => void }) {
+export default function AvatarRig({
+  anim,
+  onSeat,
+  dangle,
+}: {
+  anim: AnimRef;
+  onSeat: (seat: Seat) => void;
+  /** 0..1: arms hang down with gravity (upside-down hang in the services section) */
+  dangle?: { current: number };
+}) {
   const group = useRef<THREE.Group>(null);
   const current = useRef<string | null>(null);
   const sitW = useRef(0);
@@ -187,6 +196,7 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
   const nextBlink = useRef(1.5);
   const blinks = useRef(0);
   const jawW = useRef(0);
+  const dangleW = useRef(0);
   useEffect(() => {
     addGlasses(scene);
     // skinned meshes keep their bind-pose bounds; animated limbs can leave them
@@ -250,6 +260,8 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
     if (!avatar.clips[want]?.seated) {
       applySit(sit.bones, sit.binds, animatedBy.get(want) ?? new Set(), g, sitW.current, typeW.current, clock.elapsedTime);
     } else if (want === "typing") typingTap(sit.bones, g, typeW.current, clock.elapsedTime);
+    dangleW.current += ((dangle?.current ?? 0) - dangleW.current) * k;
+    dangleArms(sit.bones, dangleW.current, Math.sin(clock.elapsedTime * 1.3) * 0.12);
 
     // face: blink every few seconds (now and then twice), a soft smile, and the
     // jaw moves while it talks
@@ -268,7 +280,7 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
 
     // head follows the mouse: aim from the head's spot on screen
     const L = look.current;
-    L.w += ((NO_LOOK.includes(want) ? 0 : 1) - L.w) * k;
+    L.w += ((NO_LOOK.includes(want) || dangleW.current > 0.3 ? 0 : 1) - L.w) * k;
     if (sit.bones.head && L.w > 0.01) {
       sit.bones.head.getWorldPosition(_ndc).project(camera);
       g.getWorldQuaternion(_q);

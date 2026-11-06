@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
 import { isIntroDone } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
-import { animFor, poseFor, scrollPose } from "./poses";
+import { animFor, edgePose, footerPose, poseFor, risePose, scrollPose, type ScrollPose } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
@@ -315,6 +315,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const hop = useRef<THREE.Group>(null);
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
+  const dangle = useRef(0);
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
   // Opening: on the home page, once the preloader lifts and the big bronze hand
   // has risen, the character drops in from above, lands on its index finger,
@@ -369,7 +370,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     const ts = (pose.s * viewport.height) / 5;
     // Scroll-driven sections (work, clients): the scroll position inside the
     // section moves the character; phones keep him in the corner instead.
-    let scrubbed: ReturnType<typeof scrollPose> = null;
+    let scrubbed: ScrollPose | null = null;
     if (!footer && path === "/" && section === "name") {
       // the name section is pinned: its own scroll progress drives him
       scrubbed = scrollPose("name", sceneStore.get().progress.name ?? 0);
@@ -378,18 +379,39 @@ export default function Avatar({ pathname }: { pathname: string }) {
         ty = (scrubbed.y * viewport.height) / 2;
       }
     }
-    if (!mobile && !footer && path === "/" && (section === "work" || section === "clients" || section === "band")) {
+    if (!mobile && !footer && path === "/" && (section === "work" || section === "band")) {
       // work: the pinned intro (circle + title) sets the pace, not the whole section
       const el = document.querySelector<HTMLElement>(section === "work" ? "[data-work-intro]" : `[data-pose="${section}"]`);
       if (el) {
         const r = el.getBoundingClientRect();
         scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight));
       }
-      if (scrubbed) {
-        tx = (scrubbed.x * viewport.width) / 2;
-        ty = (scrubbed.y * viewport.height) / 2;
-      }
     }
+    // clients -> services: he follows the bottom edge of the dark clients
+    // section (walk, trip, tumble over it, hang upside down at the top-left);
+    // showcase: up and away; process: out of sight (poses.ts)
+    if (!mobile && !footer && path === "/" && (section === "clients" || section === "services")) {
+      const el = document.querySelector<HTMLElement>('[data-pose="clients"]');
+      if (el) scrubbed = edgePose(el.getBoundingClientRect().bottom / innerHeight, state.clock.elapsedTime);
+    }
+    if (!mobile && !footer && path === "/" && section === "brand") {
+      const el = document.querySelector<HTMLElement>('[data-pose="brand"]');
+      if (el) scrubbed = risePose(el.getBoundingClientRect().top / innerHeight);
+    }
+    if (!mobile && !footer && path === "/" && section === "process") {
+      scrubbed = { ...pose, roll: 0, anim: "idle", hide: true };
+    }
+    // footer (every page): standing on the right, rising with the footer
+    if (!mobile && footer) {
+      const el = document.querySelector<HTMLElement>("footer[data-site-footer]");
+      if (el) scrubbed = footerPose(el.getBoundingClientRect().top / innerHeight);
+    }
+    if (scrubbed && section !== "name") {
+      tx = (scrubbed.x * viewport.width) / 2;
+      ty = (scrubbed.y * viewport.height) / 2;
+    }
+    const tsWant = scrubbed && section !== "name" ? (scrubbed.s * viewport.height) / 5 : ts;
+    dangle.current = scrubbed?.dangle ?? 0;
     // In the hero the spot is the top of the bronze hand's index finger:
     // standing = feet on the finger; seated = the seat of the trousers on it,
     // legs hanging in front. `seated` follows the sit-down clip's pace.
@@ -428,7 +450,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
       if (scrubbed.anim) anim.current = scrubbed.anim;
       g.position.set(tx, ty, tz);
       g.rotation.set(0, scrubbed.ry, scrubbed.roll);
-      g.scale.setScalar(ts);
+      g.scale.setScalar(tsWant);
       return;
     }
 
@@ -492,11 +514,9 @@ export default function Avatar({ pathname }: { pathname: string }) {
     g.position.y += dy * ks;
     g.position.z += (tz - g.position.z) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
-    // hanging from the top edge (services, showcase): his legs swing a little
-    const hanging = !mobile && !footer && path === "/" && (section === "services" || section === "brand") && !travelling;
-    const roll = scrubbed?.roll ?? (hanging ? Math.sin(state.clock.elapsedTime * 1.3) * 0.06 : 0);
+    const roll = scrubbed?.roll ?? 0;
     g.rotation.z += (roll - g.rotation.z) * (scrubbed ? ks : k);
-    g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
+    g.scale.setScalar(g.scale.x + (tsWant - g.scale.x) * (scrubbed ? ks : k));
     if (hop.current) {
       const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
       hop.current.position.y += (lift - hop.current.position.y) * (1 - Math.exp(-dt * 6));
@@ -523,6 +543,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
             <Suspense fallback={null}>
               <AvatarRig
                 anim={anim}
+                dangle={dangle}
                 onSeat={(s) => {
                   seat.current = s;
                   ready.current = true;
