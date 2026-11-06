@@ -15,6 +15,7 @@ import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
 import Laptop from "./Laptop";
+import { DeskBits, GamingChair, Keyboard, Monitor, PcTower, Router } from "./DevSetup";
 
 export type AnimRef = { current: AnimState };
 
@@ -206,14 +207,14 @@ function PlaceholderBody({ anim }: { anim: AnimRef }) {
 }
 
 /**
- * Things the avatar uses: a giant open hand to sit in + laptop (hero, seated
- * typing) and a desk, monitor and chair (section "desk").
+ * Things the avatar uses: the crystal laptop (hero, seated typing), a floating
+ * shelf with a developer's setup (big-name section) and a desk with a gaming
+ * chair (section "desk"). Models: Laptop.tsx, DevSetup.tsx.
  */
 function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current: string } }) {
   const laptop = useRef<THREE.Group>(null);
   const desk = useRef<THREE.Group>(null);
   const shelf = useRef<THREE.Group>(null);
-  const screen = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame((_, dt) => {
     const { w, hipY, hipZ, kneeY, kneeZ } = seat.current;
@@ -231,7 +232,6 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
     show(laptop.current, onRock);
     show(desk.current, atDesk);
     show(shelf.current, place.current === "shelf");
-    if (screen.current) screen.current.emissiveIntensity = 1.3 + Math.sin(performance.now() / 400) * 0.2;
   });
 
   return (
@@ -242,81 +242,69 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
         <Laptop />
       </group>
 
-      {/* floating shelf with a desktop PC, pushed along in the big-name section */}
+      {/* floating shelf with a developer's setup, pushed along in the big-name
+          section; the screens and the PC's glass side face the camera (-X) */}
       <group ref={shelf} scale={0.0001} position={[0, 0.12, 1.25]}>
-        {/* the plank, light wood, lying along the way the character faces */}
         <RoundedBox args={[0.9, 0.07, 1.9]} radius={0.02}>
           <meshStandardMaterial color="#dcc7a4" roughness={0.65} />
         </RoundedBox>
-        {/* monitor */}
-        <group position={[0.05, 0.42, 0.25]} rotation={[0, -Math.PI / 2, 0]}>
-          <RoundedBox args={[0.74, 0.46, 0.04]} radius={0.015}>
-            <meshStandardMaterial color="#141418" roughness={0.4} />
-          </RoundedBox>
-          <mesh position={[0, 0, 0.022]}>
-            <planeGeometry args={[0.68, 0.4]} />
-            <meshStandardMaterial ref={screen} color="#1a0b2e" emissive="#b84dff" emissiveIntensity={1.3} />
-          </mesh>
-          <mesh position={[0, -0.3, -0.04]}>
-            <boxGeometry args={[0.05, 0.16, 0.05]} />
-            <meshStandardMaterial color="#141418" />
-          </mesh>
+        <group position={[0, 0.035, 0]}>
+          <group position={[0.12, 0, 0.82]} rotation={[0, -Math.PI / 2, 0]}>
+            <Monitor kind="editor" />
+          </group>
+          <group position={[0.14, 0, 1.36]} rotation={[0, -Math.PI / 2 + 0.25, 0]}>
+            <Monitor kind="terminal" w={0.26} h={0.42} stand={0.2} />
+          </group>
+          <group position={[0.16, 0, 1.72]}>
+            <PcTower />
+          </group>
+          <group position={[-0.2, 0, 0.86]} rotation={[0, -Math.PI / 2, 0]}>
+            <DeskBits />
+            <Keyboard />
+          </group>
+          <group position={[0.26, 0, 0.38]} rotation={[0, -Math.PI / 2, 0]}>
+            <Router />
+          </group>
         </group>
-        {/* PC tower with a lit side */}
-        <group position={[0.05, 0.3, 0.75]}>
-          <RoundedBox args={[0.24, 0.5, 0.46]} radius={0.015}>
-            <meshStandardMaterial color="#111114" roughness={0.35} metalness={0.3} />
-          </RoundedBox>
-          <mesh position={[-0.122, 0.02, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[0.38, 0.4]} />
-            <meshStandardMaterial color="#09090c" emissive="#ff3d7f" emissiveIntensity={0.9} transparent opacity={0.85} />
-          </mesh>
-        </group>
-        {/* keyboard */}
-        <RoundedBox args={[0.18, 0.02, 0.5]} radius={0.006} position={[-0.18, 0.045, 0.2]}>
-          <meshStandardMaterial color="#e9e9ee" />
-        </RoundedBox>
       </group>
 
-      {/* desk, monitor and chair */}
+      {/* desk scene: gaming chair, wooden desk on black legs, monitor, PC with a
+          glass side towards the camera, keyboard, mouse, mug and router */}
       <group ref={desk} scale={0.0001}>
-        <mesh position={[0, -0.18, -0.05]}>
-          <boxGeometry args={[0.6, 0.06, 0.55]} />
-          <meshStandardMaterial color="#2b2b33" roughness={0.6} />
-        </mesh>
-        <mesh position={[0, 0.2, -0.33]}>
-          <boxGeometry args={[0.6, 0.7, 0.06]} />
-          <meshStandardMaterial color="#2b2b33" roughness={0.6} />
-        </mesh>
-        <mesh position={[0, -0.6, -0.05]}>
-          <cylinderGeometry args={[0.04, 0.04, 0.8, 12]} />
-          <meshStandardMaterial color="#444" />
-        </mesh>
-        <RoundedBox args={[1.5, 0.06, 0.7]} radius={0.02} position={[0, 0.32, 0.75]}>
-          <meshStandardMaterial color={C.desk} roughness={0.7} />
-        </RoundedBox>
-        {[-0.68, 0.68].map((x) => (
-          <mesh key={x} position={[x, -0.33, 0.75]}>
-            <boxGeometry args={[0.05, 1.3, 0.6]} />
-            <meshStandardMaterial color={C.desk} roughness={0.8} />
-          </mesh>
-        ))}
-        <group position={[0, 0.72, 0.95]}>
-          <RoundedBox args={[0.9, 0.55, 0.04]} radius={0.02}>
-            <meshStandardMaterial color="#1b1b20" roughness={0.4} />
-          </RoundedBox>
-          <mesh position={[0, 0, -0.025]}>
-            <planeGeometry args={[0.84, 0.49]} />
-            <meshStandardMaterial color="#111" emissive={C.screen} emissiveIntensity={0.6} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, -0.35, 0]}>
-            <boxGeometry args={[0.06, 0.2, 0.06]} />
-            <meshStandardMaterial color="#1b1b20" />
-          </mesh>
+        <group position={[0, -0.1, -0.02]}>
+          <GamingChair floor={-0.55} />
         </group>
-        <RoundedBox args={[0.6, 0.03, 0.2]} radius={0.01} position={[0, 0.36, 0.55]}>
-          <meshStandardMaterial color="#e9e9ee" />
+        <RoundedBox args={[1.5, 0.05, 0.7]} radius={0.015} position={[0, 0.2, 0.75]}>
+          <meshStandardMaterial color="#d9c3a0" roughness={0.6} />
         </RoundedBox>
+        {[-0.66, 0.66].map((x) => (
+          <group key={x} position={[x, 0, 0.75]}>
+            <mesh position={[0, -0.23, 0]}>
+              <boxGeometry args={[0.04, 0.83, 0.04]} />
+              <meshStandardMaterial color="#141418" roughness={0.4} metalness={0.4} />
+            </mesh>
+            <mesh position={[0, -0.64, 0]}>
+              <boxGeometry args={[0.05, 0.03, 0.62]} />
+              <meshStandardMaterial color="#141418" roughness={0.4} metalness={0.4} />
+            </mesh>
+          </group>
+        ))}
+        <group position={[0, 0.225, 0]}>
+          <group position={[0.05, 0, 1.0]} rotation={[0, Math.PI, 0]}>
+            <Monitor kind="editor" w={0.9} h={0.5} stand={0.24} />
+          </group>
+          <group position={[0, 0, 0.56]} rotation={[0, Math.PI, 0]}>
+            <DeskBits />
+            <Keyboard />
+          </group>
+          {/* the PC stands on the floor by the desk, glass side to the camera */}
+          <group position={[0.92, -0.875, 0.55]} rotation={[0, 0.72, 0]}>
+            <PcTower />
+          </group>
+          <group position={[-0.56, 0, 1.0]} rotation={[0, Math.PI, 0]}>
+            <Router />
+          </group>
+        </group>
       </group>
     </>
   );

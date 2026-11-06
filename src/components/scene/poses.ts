@@ -19,7 +19,7 @@ export const NAMED: Record<string, Pose> = {
   // see HeroHands.tsx; x and y here are only used before the hand is ready)
   hero: { x: -0.2, y: -0.2, ry: 0.6, s: 1.1 },
   // seated at the desk (pitch section)
-  desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
+  desk: { x: -0.58, y: -0.2, ry: 0.85, s: 1.05 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
   right: { x: 0.66, y: -0.3, ry: -0.65, s: 0.72 },
   "right-high": { x: 0.68, y: 0.15, ry: -0.7, s: 0.6 },

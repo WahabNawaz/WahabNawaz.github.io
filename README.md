@@ -105,9 +105,9 @@ turning a little towards the mouse. Model: the WebXR *generic hand* (`@webxr-inp
 MIT, © 2019 Amazon), posed joint by joint in code, with a forearm added so the arm runs off screen
 (`src/components/scene/HeroHands.tsx`).
 
-Home sequence: soft cloud sky (`scene/Sky.tsx`) → big name, the character pushing a floating desk with a PC
-across the sky → the statement under northern lights → the next section comes up over the sky like a page
-with its corner folded over (`home/Pitch.tsx`) → role → service band → work → clients → services (sticky
+Home sequence: soft cloud sky (`scene/Sky.tsx`) → big name, the character pushing a floating shelf with a
+developer's setup across the sky → the statement under northern lights → the next section comes up over the sky like a page
+with its corner folded over (`home/Pitch.tsx`), the character at his desk on a white gaming chair → role → service band → work → clients → services (sticky
 heading, illustrations) → process → footer at sunset.
 
 ## Service illustrations
@@ -155,5 +155,6 @@ Or put it straight in `site.form` (`src/content/site.ts`), or use Formspree (`pr
   (Ultimate Modular Men) by Quaternius, CC0 1.0. Retargeted onto the avatar.
 - Hero hands: WebXR generic hand model, @webxr-input-profiles/assets, MIT licence, © 2019 Amazon.
 - Service illustrations: original, made for this site.
+- Desk setup, gaming chair and crystal laptop: modelled in code for this site (`scene/DevSetup.tsx`, `scene/Laptop.tsx`).
 - Demo photos: Unsplash photographers listed in `public/photos/demo/credits.json` (Unsplash License).
 - Playground "Demo beat" tracks: generated in the browser by `src/lib/demo-beat.ts` (original).
