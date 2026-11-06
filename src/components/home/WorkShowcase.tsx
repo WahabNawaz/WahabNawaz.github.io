@@ -32,7 +32,7 @@ function Laptop({ project }: { project: Project }) {
 
 export default function WorkShowcase() {
   return (
-    <section data-pose="right" className="bg-ink px-5 py-28 text-paper md:px-8 md:pr-[24%]">
+    <section data-pose="work" className="bg-ink px-5 py-28 text-paper md:px-8 md:pr-[24%]">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <h2 className="font-display text-[24vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[15vw]">
           Work

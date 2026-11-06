@@ -26,10 +26,14 @@ export const NAMED: Record<string, Pose> = {
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
   // pushing a floating shelf with a PC across the sky, in front of the big name
   name: { x: -0.42, y: -0.28, ry: 1.2, s: 0.78 },
-  // the night-sky statement: off to the right, small
-  statement: { x: 0.72, y: -0.5, ry: -0.6, s: 0.55 },
-  // standing up on the big role title
-  role: { x: 0.12, y: 0.05, ry: -0.25, s: 0.62 },
+  // the night-sky statement: he runs off the right edge and is gone
+  statement: { x: 1.6, y: -0.45, ry: 1.2, s: 0.6 },
+  // work / clients: these two are moved by the scroll (see scrollPose below);
+  // these are only the resting spots
+  work: { x: 0.7, y: -0.4, ry: -0.5, s: 0.6 },
+  clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
+  // standing in the middle of the big role title, on its own shadow
+  role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
   // services page: in the middle of the orbiting tool logos
   orbit: { x: 0.45, y: -0.32, ry: -0.2, s: 0.62 },
 };
@@ -77,7 +81,9 @@ const SECTION_ANIM: Record<string, AnimState> = {
   desk: "typing",
   name: "push",
   statement: "idle",
-  role: "wave",
+  role: "idle",
+  work: "jump",
+  clients: "jump",
   orbit: "idle",
 };
 const PAGE_ANIM: Record<string, AnimState> = {
@@ -99,4 +105,22 @@ export function animFor(
   if (section && SECTION_ANIM[section]) return SECTION_ANIM[section];
   if (PAGE_ANIM[path]) return PAGE_ANIM[path];
   return "idle";
+}
+
+/**
+ * Sections where the scroll position moves the character (0..1 = the section
+ * entering at the bottom .. leaving at the top), like the reference:
+ * - work: he leaps across the project rows, left to right, bouncing;
+ * - clients: he drops from the top to the bottom, turning as he falls.
+ */
+export function scrollPose(section: string | null, p: number): (Pose & { roll: number }) | null {
+  const c = Math.min(1, Math.max(0, p));
+  if (section === "work") {
+    const bounce = Math.abs(Math.sin(c * Math.PI * 3));
+    return { x: -0.78 + c * 1.56, y: -0.45 + bounce * 0.35, ry: 1.25, s: 0.62, roll: 0 };
+  }
+  if (section === "clients") {
+    return { x: 0.62 - c * 0.2, y: 0.75 - c * 1.5, ry: -0.6 + c * 2.4, s: 0.6, roll: Math.sin(c * Math.PI) * 0.6 };
+  }
+  return null;
 }

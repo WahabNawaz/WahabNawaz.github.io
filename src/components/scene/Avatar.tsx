@@ -3,14 +3,14 @@
 // The 3D character. The outer group handles WHERE it stands (poses.ts) and
 // WHICH animation plays (animFor). Inside is either your rigged GLB avatar
 // (src/content/avatar.ts, enabled: true) or the built-in placeholder.
-import { Suspense, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
 import { isIntroDone } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
-import { animFor, poseFor } from "./poses";
+import { animFor, poseFor, scrollPose } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
@@ -324,6 +324,18 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const seated = useRef(0); // eased like the sit-down clip, for the seat height
   const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
   const place = useRef<string>("");
+  const shadow = useRef<THREE.Mesh>(null);
+  const shadowTex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const g = c.getContext("2d")!;
+    const grd = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+    grd.addColorStop(0, "rgba(0,0,0,0.9)");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  }, []);
 
   useFrame((state, dt) => {
     const g = root.current;
@@ -355,6 +367,21 @@ export default function Avatar({ pathname }: { pathname: string }) {
     let ty = (pose.y * viewport.height) / 2;
     let tz = 0;
     const ts = (pose.s * viewport.height) / 5;
+    // Scroll-driven sections (work, clients): the scroll position inside the
+    // section moves the character; phones keep him in the corner instead.
+    let scrubbed: ReturnType<typeof scrollPose> = null;
+    if (!mobile && !footer && path === "/" && (section === "work" || section === "clients")) {
+      const el = document.querySelector<HTMLElement>(`[data-pose="${section}"]`);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight));
+      }
+      if (scrubbed) {
+        tx = (scrubbed.x * viewport.width) / 2;
+        ty = (scrubbed.y * viewport.height) / 2;
+      }
+    }
+
     // In the hero the spot is the top of the bronze hand's index finger:
     // standing = feet on the finger; seated = the seat of the trousers on it,
     // legs hanging in front. `seated` follows the sit-down clip's pace.
@@ -421,27 +448,48 @@ export default function Avatar({ pathname }: { pathname: string }) {
         entrance.current = "done";
       }
     }
-    // Travelling to a new spot: run, face the way it goes and jump in an arc.
+    // Travelling to a new spot: run (or jump, when the trip is mostly up or
+    // down), face the way it goes and hop in an arc.
     const dx = tx - g.position.x;
-    const dist = Math.hypot(dx, ty - g.position.y);
-    // (not while settling onto the finger: that is a sit-down, not a trip)
-    const travelling = dist > viewport.height * 0.06 && !(dance.active && path === "/playground") && !(onFinger && Math.abs(dx) < viewport.width * 0.04);
-    if (travelling) anim.current = "run";
-    const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : pose.ry + pointer.x * 0.15;
+    const dy = ty - g.position.y;
+    const dist = Math.hypot(dx, dy);
+    // (not while settling onto the finger: that is a sit-down, not a trip;
+    // and not where the scroll itself moves him)
+    const travelling =
+      !scrubbed &&
+      dist > viewport.height * 0.06 &&
+      !(dance.active && path === "/playground") &&
+      !(onFinger && Math.abs(dx) < viewport.width * 0.04);
+    if (travelling) anim.current = Math.abs(dy) > Math.abs(dx) * 0.9 ? "jump" : "run";
+    const ry = scrubbed ? scrubbed.ry : pose.ry;
+    const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : ry + pointer.x * 0.15;
+    const ks = scrubbed ? 1 - Math.exp(-dt * 9) : k; // follow the scroll closely
 
-    g.position.x += dx * k;
-    g.position.y += (ty - g.position.y) * k;
+    g.position.x += dx * ks;
+    g.position.y += dy * ks;
     g.position.z += (tz - g.position.z) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
+    g.rotation.z += ((scrubbed?.roll ?? 0) - g.rotation.z) * k;
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
     if (hop.current) {
       const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
       hop.current.position.y += (lift - hop.current.position.y) * (1 - Math.exp(-dt * 6));
     }
+    // a soft contact shadow under his feet where he stands on the page
+    if (shadow.current) {
+      const want = section === "role" && !travelling && !footer ? 0.42 : 0;
+      const o = shadow.current.material as THREE.MeshBasicMaterial;
+      o.opacity += (want - o.opacity) * (1 - Math.exp(-dt * 5));
+      shadow.current.visible = o.opacity > 0.01;
+    }
   });
 
   return (
     <group ref={root} scale={0.001}>
+      <mesh ref={shadow} position={[0, -1.04, 0.05]} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={-1}>
+        <planeGeometry args={[1.3, 0.7]} />
+        <meshBasicMaterial map={shadowTex} transparent opacity={0} depthWrite={false} />
+      </mesh>
       <group ref={hop}>
         {avatar.enabled ? (
           <>

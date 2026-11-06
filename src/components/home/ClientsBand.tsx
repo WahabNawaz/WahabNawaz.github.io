@@ -21,7 +21,7 @@ function Row({ offset }: { offset: number }) {
 
 export default function ClientsBand() {
   return (
-    <section data-pose="left" className="bg-ink py-28 text-paper">
+    <section data-pose="clients" className="bg-ink py-28 text-paper">
       <div className="px-5 md:px-8 md:pl-[26%]">
         <h2 className="font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">In good company.</h2>
         <p className="mt-6 max-w-md text-paper/60">Lorem ipsum brands from dolor to amet who trusted me with how they look online, and how they sell.</p>
