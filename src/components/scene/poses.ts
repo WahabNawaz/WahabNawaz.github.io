@@ -32,12 +32,12 @@ export const NAMED: Record<string, Pose> = {
   // these are only the resting spots
   work: { x: 0.7, y: -0.4, ry: -0.5, s: 0.6 },
   band: { x: 0.3, y: -0.4, ry: 1.2, s: 0.66 },
-  // services list: in the right-hand margin, explaining
-  services: { x: 0.84, y: -0.42, ry: -0.7, s: 0.62 },
-  // brand panel: standing at the bottom of the orange tile, waving
-  brand: { x: -0.12, y: -0.5, ry: 0.5, s: 0.6 },
-  // process: runs along the drawn line (Avatar.tsx), this is the fallback
-  process: { x: 0.5, y: -0.4, ry: -0.5, s: 0.55 },
+  // services list and the showcase after it: hanging from the top-left edge
+  // of the screen, only his legs show, swinging a little (Avatar.tsx)
+  services: { x: -0.74, y: 1.0, ry: 0.35, s: 0.9 },
+  brand: { x: -0.74, y: 1.0, ry: 0.35, s: 0.9 },
+  // process: he has climbed out of sight (back for the footer)
+  process: { x: -0.74, y: 2.2, ry: 0.35, s: 0.9 },
   clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
   // standing in the middle of the big role title, on its own shadow
   role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
@@ -63,8 +63,9 @@ const MOBILE_CORNER: Pose = { x: 0.62, y: -0.78, ry: -0.5, s: 0.3 };
 // between the headline and the buttons
 const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.5, s: 0.56 };
 
-// Footer text sits on the left, so the character moves right when it shows.
-const FOOTER: Pose = { x: 0.8, y: -0.3, ry: -0.5, s: 0.7 };
+// Footer text sits on the left, so the character stands on the right, big,
+// feet near the bottom of the screen (like the reference).
+const FOOTER: Pose = { x: 0.74, y: -0.5, ry: -0.35, s: 1.1 };
 
 export function poseFor(pathname: string, section: string | null, mobile: boolean, footer = false): Pose {
   const path = pathname.replace(/\/$/, "") || "/";
@@ -92,9 +93,9 @@ const SECTION_ANIM: Record<string, AnimState> = {
   work: "jump",
   clients: "jump",
   band: "jump",
-  services: "talk",
-  brand: "wave",
-  process: "run",
+  services: "idle",
+  brand: "idle",
+  process: "idle",
   orbit: "idle",
 };
 const PAGE_ANIM: Record<string, AnimState> = {
@@ -112,7 +113,7 @@ export function animFor(
 ): AnimState {
   const path = pathname.replace(/\/$/, "") || "/";
   if (path === "/playground" && dance.active) return dance.clip;
-  if (footer) return "wave";
+  if (footer) return "idle";
   if (section && SECTION_ANIM[section]) return SECTION_ANIM[section];
   if (PAGE_ANIM[path]) return PAGE_ANIM[path];
   return "idle";
@@ -120,23 +121,55 @@ export function animFor(
 
 /**
  * Sections where the scroll position moves the character (0..1 = the section
- * entering at the bottom .. leaving at the top), like the reference:
- * - band: he dives off the role title over the service cards;
- * - work: he leaps across the project rows, left to right, bouncing;
- * - clients: he drops from the top to the bottom, turning as he falls.
+ * entering at the bottom .. leaving at the top; "work" uses its pinned intro),
+ * like the reference:
+ * - name: walks off left, pushes the floating desk across, jumps off;
+ * - band: dives off the role title down past the band;
+ * - work: out of sight while the black circle opens, then dives over the
+ *   pinned WORK title from left to right and is gone again for the projects;
+ * - clients: walks in among the logos, trips ("Oops!") and falls.
+ * roll turns him in the screen plane (+ = anticlockwise); hide = not drawn
+ * (he jumps there at once instead of flying across the screen).
  */
-export function scrollPose(section: string | null, p: number): (Pose & { roll: number }) | null {
+export function scrollPose(section: string | null, p: number): (Pose & { roll: number; anim?: AnimState; hide?: boolean }) | null {
   const c = Math.min(1, Math.max(0, p));
+  if (section === "name") {
+    // walks off to the left, comes back pushing the floating desk across while
+    // the name types in, then jumps off the bottom right
+    if (c < 0.12) return { x: -0.3 - (c / 0.12) * 0.6, y: -0.35, ry: -1.3, s: 0.78, roll: 0, anim: "walk" };
+    if (c < 0.86) {
+      const k = (c - 0.12) / 0.74;
+      return { x: -0.82 + k * 1.2, y: -0.3, ry: 1.25, s: 0.78, roll: 0, anim: "push" };
+    }
+    const k = (c - 0.86) / 0.14;
+    return { x: 0.38 + k * 0.9, y: -0.3 - k * k * 1.2, ry: 1.0, s: 0.78, roll: -k * 0.6, anim: "jump" };
+  }
   if (section === "band") {
-    // a dive from the role title, over the cards, down towards the work section
-    return { x: 0.02 + c * 0.55, y: 0.05 - c * 0.85, ry: 1.25, s: 0.66, roll: -c * 1.1 };
+    // head first, down to the right, out of the bottom of the screen
+    return { x: 0.02 + c * 0.6, y: 0.1 - c * 1.7, ry: 1.25, s: 0.66, roll: -0.3 - c * 1.0, anim: "jump" };
   }
   if (section === "work") {
-    const bounce = Math.abs(Math.sin(c * Math.PI * 3));
-    return { x: -0.78 + c * 1.56, y: -0.45 + bounce * 0.35, ry: 1.25, s: 0.62, roll: 0 };
+    if (c < 0.42) return { x: -1.6, y: 0.3, ry: 1.25, s: 1.0, roll: -1.25, anim: "jump", hide: true };
+    if (c < 0.64) {
+      const k = (c - 0.42) / 0.22;
+      return { x: -1.45 + k * 3.0, y: 0.26 + Math.sin(k * Math.PI) * 0.14, ry: 1.25, s: 1.0, roll: -1.2 - k * 0.4, anim: "jump" };
+    }
+    return { x: 1.8, y: 0.3, ry: 1.25, s: 1.0, roll: -1.6, anim: "jump", hide: true };
   }
   if (section === "clients") {
-    return { x: 0.62 - c * 0.2, y: 0.75 - c * 1.5, ry: -0.6 + c * 2.4, s: 0.6, roll: Math.sin(c * Math.PI) * 0.6 };
+    if (c < 0.26) return { x: 1.25, y: -0.52, ry: -0.8, s: 0.62, roll: 0, anim: "walk", hide: true };
+    if (c < 0.5) {
+      const k = (c - 0.26) / 0.24;
+      return { x: 1.15 - k * 0.9, y: -0.52, ry: -0.8, s: 0.62, roll: 0, anim: "walk" };
+    }
+    if (c < 0.56) {
+      // the stumble
+      const k = (c - 0.5) / 0.06;
+      return { x: 0.25 - k * 0.1, y: -0.52 + k * 0.1, ry: -1.0, s: 0.62, roll: k * 0.55, anim: "jump" };
+    }
+    // and down he goes, head first to the left
+    const k = Math.min(1, (c - 0.56) / 0.18);
+    return { x: 0.15 - k * 0.6, y: -0.42 + Math.sin(k * Math.PI) * 0.18 - k * 0.2, ry: -1.1, s: 0.62, roll: 0.55 + k * 1.25, anim: "jump" };
   }
   return null;
 }

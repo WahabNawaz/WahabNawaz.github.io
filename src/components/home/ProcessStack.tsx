@@ -1,19 +1,21 @@
 "use client";
 
-// "How a project runs": the steps sit left and right of a thin curving line
-// that draws itself as you scroll (stroke-dashoffset, GSAP scrub). The 3D
-// character runs along the same line (Avatar.tsx reads [data-process-path]).
+// "How a project runs", like the reference: each step is a short text on one
+// side and a picture on the other (they swap sides every step), joined by a
+// thin curving line that draws itself as you scroll (stroke-dashoffset, GSAP
+// scrub). Pictures are the placeholder covers until real ones are added.
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { process } from "@/content/data";
+import { Cover } from "@/components/ui";
+import { process, projects } from "@/content/data";
 import { lorem } from "@/content/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-// a loose S-curve down the whole section (viewBox 100 x 1000, stretched)
-const PATH = "M 50 0 C 50 60, 82 90, 80 160 S 22 300, 24 380 S 78 520, 76 610 S 24 760, 26 840 S 52 960, 50 1000";
+// a loose S-curve down the gap between text and pictures (viewBox 100 x 1000, stretched)
+const PATH = "M 50 0 C 50 90, 54 160, 54 250 S 46 400, 46 500 S 54 650, 54 750 S 50 920, 50 1000";
 
 export default function ProcessStack() {
   const root = useRef<HTMLElement>(null);
@@ -50,8 +52,8 @@ export default function ProcessStack() {
   return (
     <section ref={root} data-pose="process" className="px-5 py-32 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-8">
-        <h2 className="max-w-xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">How a project runs</h2>
-        <p className="max-w-xs text-sm leading-relaxed text-ink/70">{lorem.sentence}</p>
+        <h2 className="max-w-xl font-display text-5xl font-normal leading-[0.95] tracking-tight md:text-6xl">How a project runs</h2>
+        <p className="max-w-xs text-right text-xs leading-relaxed text-ink/70">{lorem.sentence}</p>
       </div>
 
       <div data-steps className="relative mt-20">
@@ -60,18 +62,15 @@ export default function ProcessStack() {
         </svg>
         <ol className="relative grid gap-24 md:gap-0">
           {process.map((p, i) => (
-            <li
-              key={p.step}
-              data-step
-              className={`md:flex md:min-h-[62svh] md:items-center ${i % 2 ? "md:justify-end md:pr-[8%]" : "md:justify-start md:pl-[8%]"}`}
-            >
-              <div className="max-w-sm">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-muted">
+            <li key={p.step} data-step className="grid items-center gap-8 md:min-h-[72svh] md:grid-cols-2 md:gap-[10%] md:px-[4%]">
+              <div className={`max-w-sm ${i % 2 ? "md:order-2" : "md:justify-self-end md:text-right"}`}>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
                   Step {p.step} · {p.title}
                 </span>
-                <h3 className="mt-3 font-display text-4xl font-semibold leading-tight tracking-tight">{lorem.short}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-ink/70">{p.text}</p>
+                <h3 className="mt-3 font-display text-4xl font-normal leading-tight tracking-tight">{lorem.short}</h3>
+                <p className="mt-3 text-xs leading-relaxed text-ink/70">{p.text}</p>
               </div>
+              <Cover project={projects[i % projects.length]} className={`aspect-[4/3] w-full rounded-sm shadow-xl ${i % 2 ? "md:order-1" : ""}`} />
             </li>
           ))}
         </ol>

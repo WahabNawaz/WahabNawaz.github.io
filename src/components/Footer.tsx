@@ -50,22 +50,29 @@ export default function Footer() {
   return (
     <footer
       ref={ref}
-      className="relative isolate z-10 overflow-hidden px-5 pb-8 pt-24 text-paper md:px-8"
+      className="relative isolate z-10 flex min-h-svh flex-col overflow-hidden px-5 pb-8 pt-24 text-ink md:px-8 md:pt-[34svh]"
     >
-      {/* always a warm sunset down here, whatever the hero's sky is set to */}
-      <Sky mode="sunset" className="absolute inset-0 -z-10 bg-[#6a5a86]" />
-      <p className="font-mono text-xs uppercase tracking-widest opacity-60">Lorem ipsum?</p>
-      <h2 className="mt-4 max-w-4xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-8xl">
-        Got something worth building?
-      </h2>
-      <a
-        href={`mailto:${site.email}`}
-        className="mt-10 inline-block font-display text-2xl underline decoration-accent decoration-2 underline-offset-8 hover:text-accent md:text-4xl"
-      >
-        {site.email}
-      </a>
+      {/* always a bright day sky with soft clouds down here, like the
+          reference, whatever the hero's sky is set to; the character stands
+          on the right (poses.ts FOOTER) */}
+      <Sky mode="day" className="absolute inset-0 -z-10 bg-[#b9c9e4]" />
+      <p className="text-xs opacity-70">Lorem ipsum? Good sign.</p>
+      <div className="mb-24 mt-4 flex flex-wrap items-end gap-x-12 gap-y-8 md:pr-[22%]">
+        <h2 className="max-w-xl font-display text-5xl font-normal leading-[1] tracking-tight md:text-6xl">
+          Got something
+          <br />
+          worth building?
+        </h2>
+        <div>
+          <p className="text-[11px] opacity-70">Email me</p>
+          <a href={`mailto:${site.email}`} className="mt-1 inline-block font-display text-2xl hover:text-accent md:text-4xl">
+            {site.email}
+          </a>
+          <p className="mt-2 text-[11px] opacity-70">Lorem ipsum within a day.</p>
+        </div>
+      </div>
 
-      <div className="mt-24 grid grid-cols-2 gap-8 border-t border-current/15 pt-8 font-mono text-xs uppercase tracking-widest md:grid-cols-4">
+      <div className="mt-auto grid grid-cols-2 gap-8 border-t border-current/15 pt-8 font-mono text-[11px] uppercase tracking-widest md:mr-[24%] md:grid-cols-4">
         <div>
           <p className="mb-3 opacity-50">Pages</p>
           <ul className="space-y-2">
@@ -104,7 +111,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mt-16 flex items-center justify-between font-mono text-xs uppercase tracking-widest opacity-50">
+      <div className="mt-16 flex items-center justify-between font-mono text-[11px] uppercase tracking-widest opacity-60 md:mr-[24%]">
         <span>© {site.year} {site.name}</span>
         <button type="button" onClick={() => lenis?.scrollTo(0)} className="hover:text-accent">
           Back to top ↑

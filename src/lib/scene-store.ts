@@ -22,6 +22,7 @@ type State = {
   section: string | null; // data-pose of the section in view (see poses.ts)
   footer: boolean; // footer is on screen
   dance: Dance;
+  progress: Record<string, number>; // 0..1 through a pinned section (e.g. "name")
 };
 
 const state: State = {
@@ -30,6 +31,7 @@ const state: State = {
   section: null,
   footer: false,
   dance: { active: false, playing: false, time: 0, bpm: 112, clip: "dance1" },
+  progress: {},
 };
 const listeners = new Set<() => void>();
 
@@ -42,6 +44,9 @@ export const sceneStore = {
   },
   setSection(name: string | null) {
     state.section = name;
+  },
+  setProgress(name: string, p: number) {
+    state.progress[name] = Math.min(1, Math.max(0, p));
   },
   setFooter(visible: boolean) {
     state.footer = visible;

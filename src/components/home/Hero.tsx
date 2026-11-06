@@ -38,7 +38,7 @@ export default function Hero() {
       className="relative h-svh min-h-[640px] overflow-hidden px-5 pb-8 pt-24 md:px-8"
     >
       {/* centred headline */}
-      <h1 className="text-center font-display text-[10vw] font-medium leading-[1.02] tracking-tight md:text-[5.6vw]">
+      <h1 className="text-center font-display text-[9vw] font-normal leading-[1.05] tracking-tight md:text-[3.6vw]">
         {lines.map((l) => (
           <span key={l} className="block overflow-hidden pb-[0.06em]">
             <span data-line className="block">

@@ -1,9 +1,9 @@
 "use client";
 
 // Three-word pitch that lights up line by line, three proof points and reviews.
-// The section comes up over the sky like a page whose top-left corner is still
-// folded over: the fold opens as it scrolls into place (clip-path + a shaded
-// flap, scrubbed with the scroll).
+// The section turns in over the sky like a page peeled from the bottom-right
+// corner: a diagonal edge sweeps up to the top left (clip-path), with a shaded
+// curl along the edge, scrubbed with the scroll.
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -26,27 +26,39 @@ export default function Pitch() {
         gsap.set(flap.current, { display: "none" });
         return;
       }
-      // the folded corner: c = fold size in px, from big to nothing
-      const fold = { c: 0 };
-      const big = () => Math.min(window.innerWidth, window.innerHeight) * 0.75;
+      // the peel: p = 0 nothing shown, 1 all of it. The edge is the line
+      // x + y = k (in the section's own pixels), starting at the screen's
+      // bottom-right corner and sweeping up and left.
+      const peel = { p: 0 };
       const draw = () => {
-        const c = fold.c;
-        if (root.current) root.current.style.clipPath = c > 0.5 ? `polygon(${c}px 0, 100% 0, 100% 100%, 0 100%, 0 ${c}px)` : "none";
-        if (flap.current) {
-          flap.current.style.width = flap.current.style.height = `${c}px`;
-          flap.current.style.opacity = c > 0.5 ? "1" : "0";
+        const el = root.current;
+        const curl = flap.current;
+        if (!el || !curl) return;
+        const r = el.getBoundingClientRect();
+        const corner = r.width + (window.innerHeight - r.top);
+        const k = corner - peel.p * (window.innerWidth + window.innerHeight) * 1.08;
+        if (peel.p >= 0.999 || k <= 0) {
+          el.style.clipPath = "none";
+          curl.style.opacity = "0";
+          return;
         }
+        el.style.clipPath = `polygon(${k}px 0px, 99999px 0px, 99999px 99999px, 0px 99999px, 0px ${k}px)`;
+        // the curl: a shaded band on the page side of the edge
+        const w = 40 + 150 * Math.sin(Math.PI * Math.min(1, peel.p * 1.1));
+        const len = (window.innerWidth + window.innerHeight) * 2;
+        const n = w / 2 / Math.SQRT2; // half the band's width, along the diagonal
+        curl.style.opacity = "1";
+        curl.style.width = `${len}px`;
+        curl.style.height = `${w}px`;
+        curl.style.left = `${k / 2 + n - len / 2}px`;
+        curl.style.top = `${k / 2 + n - w / 2}px`;
       };
-      gsap.fromTo(
-        fold,
-        { c: big },
-        {
-          c: 0,
-          ease: "power1.inOut",
-          onUpdate: draw,
-          scrollTrigger: { trigger: root.current, start: "top bottom", end: "top 15%", scrub: 0.4, invalidateOnRefresh: true },
-        },
-      );
+      gsap.to(peel, {
+        p: 1,
+        ease: "none",
+        onUpdate: draw,
+        scrollTrigger: { trigger: root.current, start: "top bottom", end: "top 2%", scrub: 0.3, invalidateOnRefresh: true },
+      });
       gsap.fromTo(
         "[data-pitch]",
         { opacity: 0.12 },
@@ -75,18 +87,17 @@ export default function Pitch() {
       data-pose="desk"
       className="relative z-10 -mt-[100svh] min-h-[112svh] bg-paper px-5 py-28 md:px-8"
     >
-      {/* the folded-over corner (back of the page), lit from the top left */}
+      {/* the curl along the peeling edge: a shaded strip, lit at the fold */}
       <div
         ref={flap}
         aria-hidden
-        className="pointer-events-none absolute left-0 top-0 z-20"
-        style={{ filter: "drop-shadow(6px 8px 14px rgba(0,0,0,0.25))" }}
-      >
-        <div
-          className="size-full [clip-path:polygon(100%_0,0_100%,100%_100%)]"
-          style={{ background: "linear-gradient(135deg, #ffffff 0%, #f1ece2 45%, #d9d1c2 75%, #b9b0a1 100%)" }}
-        />
-      </div>
+        className="pointer-events-none absolute z-20 origin-center -rotate-45 opacity-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, #ffffff 0%, #f6f3ee 22%, #e3ddd2 48%, #c9c1b2 72%, rgba(120,110,95,0.35) 88%, rgba(0,0,0,0) 100%)",
+          boxShadow: "0 -10px 30px rgba(0,0,0,0.18)",
+        }}
+      />
       {/* laid out like the reference: headline top left over the desk scene, a
           note pointing at the character, reviews on the right, proof points
           bottom left, a closing line bottom right (all placeholder copy) */}

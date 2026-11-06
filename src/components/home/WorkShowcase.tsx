@@ -1,9 +1,19 @@
-// Home "Work" section: a huge title, then projects shown inside device
-// frames (monitor / laptop, drawn with CSS) with a one-line pitch above each.
+"use client";
+
+// Home "Work" section, like the reference: a black circle grows out of the
+// page and opens onto a huge, centred WORK title (pinned while the 3D
+// character dives over it, see poses.ts), then the projects follow inside
+// device frames (monitor / laptop, drawn with CSS) with a one-line pitch above.
+import { useRef } from "react";
 import Link from "next/link";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import Reveal from "@/components/Reveal";
 import { ArrowLink, Cover } from "@/components/ui";
 import { projects, type Project } from "@/content/data";
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 function Monitor({ project }: { project: Project }) {
   return (
@@ -31,37 +41,73 @@ function Laptop({ project }: { project: Project }) {
 }
 
 export default function WorkShowcase() {
+  const root = useRef<HTMLElement>(null);
+
+  useGSAP(
+    () => {
+      const circle = "[data-work-circle]";
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(circle, { clipPath: "circle(150% at 56% 62%)" });
+        return;
+      }
+      gsap.fromTo(
+        circle,
+        { clipPath: "circle(0% at 56% 62%)" },
+        {
+          clipPath: "circle(150% at 56% 62%)",
+          ease: "power1.in",
+          scrollTrigger: { trigger: "[data-work-intro]", start: "top 85%", end: "top -15%", scrub: 0.3 },
+        },
+      );
+      gsap.from("[data-work-title]", {
+        yPercent: 18,
+        scale: 0.86,
+        ease: "none",
+        scrollTrigger: { trigger: "[data-work-intro]", start: "top 70%", end: "top top", scrub: 0.3 },
+      });
+    },
+    { scope: root },
+  );
+
   return (
-    <section data-pose="work" className="bg-ink px-5 py-28 text-paper md:px-8 md:pr-[24%]">
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <h2 className="font-display text-[24vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[15vw]">
-          Work
-          <sup className="ml-3 align-top font-mono text-sm tracking-widest text-paper/50">’25–26</sup>
-        </h2>
-        <p className="max-w-xs text-right font-display text-2xl leading-tight md:text-3xl">
-          Lorem sites get seen. Ipsum sites get remembered.
-        </p>
+    <section ref={root} data-pose="work" className="relative text-paper">
+      <div data-work-intro className="relative h-[170svh]">
+        <div className="sticky top-0 h-svh overflow-hidden">
+          <div data-work-circle className="absolute inset-0 flex flex-col bg-ink px-5 pb-12 pt-[18svh] md:px-8" style={{ clipPath: "circle(0% at 56% 62%)" }}>
+            <h2 data-work-title className="relative mx-auto font-display text-[30vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[19vw]">
+              Work
+              <sup className="absolute -right-[0.9em] top-[0.2em] font-mono text-[11px] font-normal normal-case tracking-widest text-paper/70 md:text-sm">’25–26</sup>
+            </h2>
+            <p className="mt-auto ml-auto max-w-md text-right font-display text-2xl leading-tight md:text-4xl">
+              Lorem sites get seen.
+              <br />
+              Ipsum sites get remembered.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-20 grid gap-x-10 gap-y-24 md:grid-cols-2">
-        {projects.slice(0, 4).map((p, i) => (
-          <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-32" : ""}>
-            <Link href={`/work/${p.slug}/`} className="group block">
-              <p className="mb-5 max-w-xs font-display text-2xl leading-tight">{p.summary}</p>
-              {i % 2 === 0 ? <Monitor project={p} /> : <Laptop project={p} />}
-              <div className="mt-6 flex items-baseline justify-between font-mono text-xs uppercase tracking-widest">
-                <span className="transition-colors group-hover:text-accent">{p.title}</span>
-                <span className="text-paper/50">{p.year}</span>
-              </div>
-            </Link>
-          </Reveal>
-        ))}
-      </div>
+      <div className="relative bg-ink px-5 pb-28 md:px-8 md:pr-[18%]">
+        <div className="grid gap-x-10 gap-y-24 md:grid-cols-2">
+          {projects.slice(0, 4).map((p, i) => (
+            <Reveal key={p.slug} delay={(i % 2) * 0.1} className={i % 2 ? "md:mt-32" : ""}>
+              <Link href={`/work/${p.slug}/`} className="group block">
+                <p className="mb-5 max-w-xs font-display text-2xl leading-tight">{p.summary}</p>
+                {i % 2 === 0 ? <Monitor project={p} /> : <Laptop project={p} />}
+                <div className="mt-6 flex items-baseline justify-between font-mono text-xs uppercase tracking-widest">
+                  <span className="transition-colors group-hover:text-accent">{p.title}</span>
+                  <span className="text-paper/50">{p.year}</span>
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
 
-      <div className="mt-20 flex justify-center">
-        <ArrowLink href="/work/" dark>
-          See all work
-        </ArrowLink>
+        <div className="mt-20 flex justify-center">
+          <ArrowLink href="/work/" dark>
+            See all work
+          </ArrowLink>
+        </div>
       </div>
     </section>
   );

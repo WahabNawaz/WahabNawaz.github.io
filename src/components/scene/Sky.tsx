@@ -43,7 +43,7 @@ const AURORA: Palette = {
 const paletteNow = (fixed?: SkyMode) => {
   if (fixed) return PALETTE[fixed];
   const { section, sky } = sceneStore.get();
-  return section === "statement" ? AURORA : PALETTE[sky];
+  return section === "statement" && sky === "night" ? AURORA : PALETTE[sky];
 };
 
 const vertexShader = /* glsl */ `

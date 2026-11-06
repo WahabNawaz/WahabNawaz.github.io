@@ -335,7 +335,7 @@ test.describe("site", () => {
     expect(errors).toEqual([]);
   });
 
-  test("9 · footer and the waving character", async ({ page }, info) => {
+  test("9 · footer and the character standing by it", async ({ page }, info) => {
     const errors = watchErrors(page);
     await skipIntro(page);
     await page.goto("/");
@@ -343,7 +343,7 @@ test.describe("site", () => {
     await scrollTo(page, "bottom");
     await page.waitForTimeout(1500);
     await expect(page.getByRole("contentinfo")).toBeInViewport();
-    await expect(avatar(page)).toHaveAttribute("data-avatar", "wave", { timeout: 10_000 });
+    await expect(avatar(page)).toHaveAttribute("data-avatar", "idle", { timeout: 10_000 });
     await shot(page, info, "18-footer");
     expect(errors).toEqual([]);
   });

@@ -353,7 +353,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
         ? "rock"
         : section === "desk"
           ? "desk"
-          : section === "name"
+          : section === "name" && (sceneStore.get().progress.name ?? 0) > 0.1 && (sceneStore.get().progress.name ?? 0) < 0.86
             ? "shelf"
             : "";
 
@@ -370,8 +370,17 @@ export default function Avatar({ pathname }: { pathname: string }) {
     // Scroll-driven sections (work, clients): the scroll position inside the
     // section moves the character; phones keep him in the corner instead.
     let scrubbed: ReturnType<typeof scrollPose> = null;
+    if (!footer && path === "/" && section === "name") {
+      // the name section is pinned: its own scroll progress drives him
+      scrubbed = scrollPose("name", sceneStore.get().progress.name ?? 0);
+      if (scrubbed) {
+        tx = (scrubbed.x * viewport.width) / 2;
+        ty = (scrubbed.y * viewport.height) / 2;
+      }
+    }
     if (!mobile && !footer && path === "/" && (section === "work" || section === "clients" || section === "band")) {
-      const el = document.querySelector<HTMLElement>(`[data-pose="${section}"]`);
+      // work: the pinned intro (circle + title) sets the pace, not the whole section
+      const el = document.querySelector<HTMLElement>(section === "work" ? "[data-work-intro]" : `[data-pose="${section}"]`);
       if (el) {
         const r = el.getBoundingClientRect();
         scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight));
@@ -381,37 +390,6 @@ export default function Avatar({ pathname }: { pathname: string }) {
         ty = (scrubbed.y * viewport.height) / 2;
       }
     }
-    // Process: he runs along the line drawn down the section, staying a little
-    // below the middle of the screen (the point of the path at that height).
-    if (!mobile && !footer && path === "/" && section === "process") {
-      const line = document.querySelector<SVGPathElement>("[data-process-path]");
-      const ctm = line?.getScreenCTM();
-      if (line && ctm) {
-        const len = line.getTotalLength();
-        const want = innerHeight * 0.66;
-        const at = (l: number) => line.getPointAtLength(l).matrixTransform(ctm);
-        let lo = 0, hi = len;
-        for (let i = 0; i < 18; i++) {
-          const mid = (lo + hi) / 2;
-          if (at(mid).y < want) lo = mid;
-          else hi = mid;
-        }
-        const pt = at(lo);
-        const ahead = at(Math.min(len, lo + len * 0.01));
-        if (pt.y > -50 && pt.y < innerHeight + 50) {
-          scrubbed = {
-            x: (pt.x / innerWidth) * 2 - 1,
-            y: -((pt.y / innerHeight) * 2 - 1) + 0.23, // feet on the line
-            ry: ahead.x >= pt.x ? 1.2 : -1.2,
-            s: 0.55,
-            roll: 0,
-          };
-          tx = (scrubbed.x * viewport.width) / 2;
-          ty = (scrubbed.y * viewport.height) / 2;
-        }
-      }
-    }
-
     // In the hero the spot is the top of the bronze hand's index finger:
     // standing = feet on the finger; seated = the seat of the trousers on it,
     // legs hanging in front. `seated` follows the sit-down clip's pace.
@@ -439,6 +417,19 @@ export default function Avatar({ pathname }: { pathname: string }) {
         g.position.set(tx, ty, tz);
         g.rotation.y = pose.ry;
       }
+    }
+
+    // turn first, then roll in the screen plane (a dive reads as a dive even
+    // when he is side-on)
+    g.rotation.order = "ZYX";
+    // out of sight in this part of the scroll: jump straight to the spot
+    g.visible = !scrubbed?.hide;
+    if (scrubbed?.hide && entrance.current === "done") {
+      if (scrubbed.anim) anim.current = scrubbed.anim;
+      g.position.set(tx, ty, tz);
+      g.rotation.set(0, scrubbed.ry, scrubbed.roll);
+      g.scale.setScalar(ts);
+      return;
     }
 
     if (entrance.current !== "done") {
@@ -490,7 +481,9 @@ export default function Avatar({ pathname }: { pathname: string }) {
       dist > viewport.height * 0.06 &&
       !(dance.active && path === "/playground") &&
       !(onFinger && Math.abs(dx) < viewport.width * 0.04);
-    if (travelling) anim.current = Math.abs(dy) > Math.abs(dx) * 0.9 ? "jump" : "run";
+    // (into the role section he just stands up from the desk and walks over)
+    if (travelling) anim.current = section === "role" ? "walk" : Math.abs(dy) > Math.abs(dx) * 0.9 ? "jump" : "run";
+    if (scrubbed?.anim) anim.current = scrubbed.anim;
     const ry = scrubbed ? scrubbed.ry : pose.ry;
     const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : ry + pointer.x * 0.15;
     const ks = scrubbed ? 1 - Math.exp(-dt * 9) : k; // follow the scroll closely
@@ -499,7 +492,10 @@ export default function Avatar({ pathname }: { pathname: string }) {
     g.position.y += dy * ks;
     g.position.z += (tz - g.position.z) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
-    g.rotation.z += ((scrubbed?.roll ?? 0) - g.rotation.z) * k;
+    // hanging from the top edge (services, showcase): his legs swing a little
+    const hanging = !mobile && !footer && path === "/" && (section === "services" || section === "brand") && !travelling;
+    const roll = scrubbed?.roll ?? (hanging ? Math.sin(state.clock.elapsedTime * 1.3) * 0.06 : 0);
+    g.rotation.z += (roll - g.rotation.z) * (scrubbed ? ks : k);
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
     if (hop.current) {
       const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
