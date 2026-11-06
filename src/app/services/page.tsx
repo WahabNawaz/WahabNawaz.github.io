@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
 import PoseScope from "@/components/PoseScope";
 import ToolsOrbit from "@/components/services/ToolsOrbit";
+import ServiceArt from "@/components/ServiceArt";
 import { Label, PageIntro } from "@/components/ui";
 import { services } from "@/content/data";
 import { lorem } from "@/content/site";
@@ -29,13 +30,16 @@ export default function ServicesPage() {
         </ul>
       </nav>
 
-      {services.map((s) => (
+      {services.map((s, i) => (
         <section key={s.id} id={s.id} className="scroll-mt-28 border-b border-line px-5 py-28 md:px-8 md:pr-[22%]">
           <div className="grid gap-10 md:grid-cols-[1fr_1.3fr]">
             <div>
               <span className="font-mono text-xs text-accent">{s.number}</span>
               <h2 className="mt-3 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-6xl">{s.title}</h2>
               <Label className="mt-4">{s.kicker}</Label>
+              <Reveal>
+                <ServiceArt id={s.id} delay={i * 1.3} sizes="(min-width: 768px) 34vw, 90vw" className="mt-8 w-full max-w-[460px]" />
+              </Reveal>
             </div>
             <div>
               <p className="text-lg leading-relaxed text-ink/80">{s.intro}</p>

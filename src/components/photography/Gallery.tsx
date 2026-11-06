@@ -2,17 +2,42 @@
 
 // Photo gallery: one photo per row with a caption, and a sticky thumbnail rail
 // that highlights the photo in view. Click a thumbnail to jump to it.
-// Placeholders are gradients: put real photos in /public/photos and swap them in.
+// Click a photo to open the lightbox. Images are WebP in 3 widths
+// (<src>-160|800|1600.webp), lazy-loaded.
 import { useRef, useState } from "react";
 import { useLenis } from "lenis/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Lightbox from "./Lightbox";
+import { asset } from "@/lib/asset";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-export type Photo = { id: string; title: string; caption: string; colors: [string, string]; ratio: string };
+export type Photo = {
+  id: string;
+  title: string;
+  caption: string;
+  ratio: string; // CSS aspect-ratio, e.g. "3 / 2"
+  src: string; // path without the "-800.webp" ending
+  credit?: { author: string; url: string }; // demo / stock photos
+  demo?: boolean;
+};
+
+export const photoUrl = (p: Photo, w: 160 | 800 | 1600) => asset(`${p.src}-${w}.webp`);
+export const photoSrcSet = (p: Photo) => `${photoUrl(p, 800)} 800w, ${photoUrl(p, 1600)} 1600w`;
+
+export function PhotoCredit({ photo, className = "" }: { photo: Photo; className?: string }) {
+  if (!photo.credit) return null;
+  return (
+    <p className={`font-mono text-[11px] uppercase tracking-widest ${className}`}>
+      {photo.demo ? "Demo photo" : "Photo"} ·{" "}
+      <a href={photo.credit.url} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+        {photo.credit.author} / Unsplash
+      </a>
+    </p>
+  );
+}
 
 export default function Gallery({ photos }: { photos: Photo[] }) {
   const root = useRef<HTMLDivElement>(null);
@@ -57,11 +82,13 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
                 onClick={() => jump(i)}
                 aria-label={`Go to ${p.title}`}
                 aria-current={active === i}
-                className={`block h-12 w-full rounded-md outline-offset-2 transition-all duration-300 ${
+                className={`block h-12 w-full overflow-hidden rounded-md bg-line outline-offset-2 transition-all duration-300 ${
                   active === i ? "scale-105 outline outline-2 outline-ink" : "opacity-50 hover:opacity-100"
                 }`}
-                style={{ background: `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[1]})` }}
-              />
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+                <img src={photoUrl(p, 160)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+              </button>
             </li>
           ))}
         </ul>
@@ -74,14 +101,29 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
               type="button"
               data-img
               onClick={() => setOpen(i)}
-              aria-label={`Open ${p.title} (placeholder)`}
-              className="block w-full cursor-zoom-in overflow-hidden rounded-xl transition-transform duration-500 hover:scale-[1.01]"
-              style={{ aspectRatio: p.ratio, background: `radial-gradient(120% 100% at 30% 20%, ${p.colors[1]}, ${p.colors[0]} 60%, #111114)` }}
-            />
+              aria-label={`Open ${p.title}`}
+              className="group relative block w-full cursor-zoom-in overflow-hidden rounded-xl bg-line"
+              style={{ aspectRatio: p.ratio }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- static export, pre-sized WebP */}
+              <img
+                src={photoUrl(p, 800)}
+                srcSet={photoSrcSet(p)}
+                sizes="(min-width: 768px) 50vw, 92vw"
+                alt={p.title}
+                loading={i < 2 ? "eager" : "lazy"}
+                decoding="async"
+                className="size-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
+              />
+              <span className="pointer-events-none absolute bottom-4 right-4 translate-y-2 rounded-full bg-paper/90 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-ink opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                View ↗
+              </span>
+            </button>
             <div>
               <span className="font-mono text-xs text-muted">{String(i + 1).padStart(2, "0")}</span>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">{p.title}</h2>
               <p className="mt-2 text-ink/70">{p.caption}</p>
+              <PhotoCredit photo={p} className="mt-4 text-muted" />
             </div>
           </li>
         ))}

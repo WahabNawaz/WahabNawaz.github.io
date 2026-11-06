@@ -1,6 +1,7 @@
 // Moving band of service cards, each with an "Open for projects" badge.
 import Marquee from "@/components/Marquee";
 import { services } from "@/content/data";
+import ServiceArt from "@/components/ServiceArt";
 
 export default function ServiceBand() {
   return (
@@ -12,8 +13,9 @@ export default function ServiceBand() {
         <span className="text-ink/50">Services</span>
       </div>
       <Marquee duration={45}>
-        {services.map((s) => (
-          <article key={s.id} className="mx-3 flex w-[78vw] max-w-md shrink-0 flex-col justify-between gap-10 rounded-3xl bg-white/70 p-7 shadow-sm md:w-[30vw]">
+        {services.map((s, i) => (
+          <article key={s.id} className="mx-3 flex w-[78vw] max-w-md shrink-0 flex-col justify-between gap-6 rounded-3xl bg-white/70 p-7 shadow-sm md:w-[30vw]">
+            <ServiceArt id={s.id} delay={i * 1.3} sizes="(min-width: 768px) 28vw, 75vw" className="-mx-2 -mt-3" />
             <div>
               <p className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{s.kicker} —</p>
               <h3 className="mt-3 font-display text-3xl font-semibold tracking-tight">

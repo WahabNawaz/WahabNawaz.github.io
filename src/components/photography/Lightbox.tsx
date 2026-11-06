@@ -5,14 +5,14 @@
 import { useEffect, useRef } from "react";
 import { useLenis } from "lenis/react";
 import gsap from "gsap";
-import type { Photo } from "./Gallery";
+import { PhotoCredit, photoSrcSet, photoUrl, type Photo } from "./Gallery";
 
 type Props = { photos: Photo[]; index: number; onChange: (i: number) => void; onClose: () => void };
 
 export default function Lightbox({ photos, index, onChange, onClose }: Props) {
   const lenis = useLenis();
   const closeBtn = useRef<HTMLButtonElement>(null);
-  const img = useRef<HTMLDivElement>(null);
+  const img = useRef<HTMLImageElement>(null);
   const startX = useRef<number | null>(null);
   const p = photos[index];
   const n = photos.length;
@@ -41,7 +41,12 @@ export default function Lightbox({ photos, index, onChange, onClose }: Props) {
 
   useEffect(() => {
     if (img.current) gsap.fromTo(img.current, { autoAlpha: 0, scale: 0.96 }, { autoAlpha: 1, scale: 1, duration: 0.45, ease: "power3.out" });
-  }, [index]);
+    // warm up the neighbours so next / previous show at once
+    [index + 1, index - 1].forEach((i) => {
+      const q = photos[(i + n) % n];
+      if (q) new Image().src = photoUrl(q, 1600);
+    });
+  }, [index, n, photos]);
 
   return (
     <div
@@ -71,12 +76,17 @@ export default function Lightbox({ photos, index, onChange, onClose }: Props) {
         <button type="button" onClick={() => go(-1)} aria-label="Previous photo" className="hidden size-12 shrink-0 rounded-full border border-paper/30 hover:bg-paper hover:text-ink md:block">
           ←
         </button>
-        <div
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export, pre-sized WebP */}
+        <img
           ref={img}
-          role="img"
-          aria-label={`${p.title} (placeholder)`}
-          className="max-h-full w-full max-w-5xl rounded-xl"
-          style={{ aspectRatio: p.ratio, maxHeight: "70vh", background: `radial-gradient(120% 100% at 30% 20%, ${p.colors[1]}, ${p.colors[0]} 60%, #111114)` }}
+          key={p.id}
+          src={photoUrl(p, 1600)}
+          srcSet={photoSrcSet(p)}
+          sizes="(min-width: 1024px) 64rem, 100vw"
+          alt={p.title}
+          draggable={false}
+          className="max-h-[70vh] w-auto min-w-0 max-w-full select-none rounded-xl object-contain md:max-w-5xl"
+          style={{ aspectRatio: p.ratio }}
         />
         <button type="button" onClick={() => go(1)} aria-label="Next photo" className="hidden size-12 shrink-0 rounded-full border border-paper/30 hover:bg-paper hover:text-ink md:block">
           →
@@ -86,6 +96,7 @@ export default function Lightbox({ photos, index, onChange, onClose }: Props) {
       <div className="mx-auto max-w-xl text-center">
         <h2 className="font-display text-2xl font-semibold tracking-tight">{p.title}</h2>
         <p className="mt-1 text-paper/70">{p.caption}</p>
+        <PhotoCredit photo={p} className="mt-3 text-paper/50" />
         <p className="mt-3 font-mono text-[11px] uppercase tracking-widest text-paper/40 md:hidden">Swipe to browse</p>
       </div>
     </div>

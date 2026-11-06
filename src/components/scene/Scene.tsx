@@ -2,7 +2,7 @@
 
 // The persistent 3D layer. It lives in the root layout, so it is NOT
 // re-created on page changes: the character walks from page to page.
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
 import * as THREE from "three";
@@ -10,6 +10,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
 import { isIntroDone } from "@/lib/intro";
 import Avatar from "./Avatar";
+import { PointingHand } from "./HeroHands";
 import { pointer, trackPointer } from "./pointer";
 
 const LIGHT: Record<SkyMode, { key: string; fill: string; keyI: number; ambI: number }> = {
@@ -147,7 +148,11 @@ export default function Scene({ pathname }: { pathname: string }) {
       <CameraRig />
       <Lights />
       <Avatar pathname={pathname} />
-      {/* decorative floating shapes are off now that the hero has the rock;
+      {/* only shows while the home hero is in view */}
+      <Suspense fallback={null}>
+        <PointingHand />
+      </Suspense>
+      {/* decorative floating shapes are off now that the hero has the hands;
           put <Shapes /> back here to show them on the home hero */}
     </Canvas>
   );

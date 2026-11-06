@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>html,body{margin:0;background:#9fb8d8;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const params = new URLSearchParams(location.search);
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899cc, 1));
+const sun = new THREE.DirectionalLight(0xfff2e0, 2.2); sun.position.set(3, 5, 4); scene.add(sun);
+
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.01, 100);
+const view = params.get("view") || "top";
+const gltf = await new GLTFLoader().loadAsync("/tools/render/lab/" + (params.get("side") || "right") + ".glb");
+const hand = gltf.scene;
+scene.add(hand);
+const bones = {};
+hand.traverse((o) => { if (o.isBone || o.type === "Object3D") bones[o.name] = o; });
+// axes on a few joints
+for (const n of ["wrist", "index-finger-phalanx-proximal", "thumb-metacarpal"]) {
+  if (bones[n]) { const a = new THREE.AxesHelper(0.03); a.material.depthTest = false; a.renderOrder = 9; bones[n].add(a); }
+}
+// The joints come flat (all children of the armature). Chain them so a bend
+// carries the rest of the finger along.
+const CHAINS = {
+  thumb: ["thumb-metacarpal", "thumb-phalanx-proximal", "thumb-phalanx-distal", "thumb-tip"],
+  index: ["index-finger-metacarpal", "index-finger-phalanx-proximal", "index-finger-phalanx-intermediate", "index-finger-phalanx-distal", "index-finger-tip"],
+  middle: ["middle-finger-metacarpal", "middle-finger-phalanx-proximal", "middle-finger-phalanx-intermediate", "middle-finger-phalanx-distal", "middle-finger-tip"],
+  ring: ["ring-finger-metacarpal", "ring-finger-phalanx-proximal", "ring-finger-phalanx-intermediate", "ring-finger-phalanx-distal", "ring-finger-tip"],
+  pinky: ["pinky-finger-metacarpal", "pinky-finger-phalanx-proximal", "pinky-finger-phalanx-intermediate", "pinky-finger-phalanx-distal", "pinky-finger-tip"],
+};
+hand.updateMatrixWorld(true);
+for (const chain of Object.values(CHAINS)) {
+  let parent = bones.wrist;
+  for (const n of chain) { parent.attach(bones[n]); parent = bones[n]; }
+}
+// ring stats at the wrist cut (wrist frame)
+{
+  let mesh; hand.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
+  const pos = mesh.geometry.getAttribute("position");
+  const toWrist = bones.wrist.matrixWorld.clone().invert().multiply(mesh.matrixWorld);
+  const v = new THREE.Vector3(); const pts = [];
+  for (let i = 0; i < pos.count; i++) { mesh.applyBoneTransform(i, v.fromBufferAttribute(pos, i)).applyMatrix4(toWrist); pts.push(v.clone()); }
+  const ext = (k) => [Math.min(...pts.map((p) => p[k])), Math.max(...pts.map((p) => p[k]))].map((x) => +x.toFixed(4));
+  const maxZ = ext("z")[1];
+  const ring = pts.filter((p) => p.z > maxZ - 0.014); // the cut is a little slanted
+  window.ringInfo = { x: ext("x"), y: ext("y"), z: ext("z"), n: ring.length, rx: [Math.min(...ring.map(p=>p.x)), Math.max(...ring.map(p=>p.x))].map((x) => +x.toFixed(4)), ry: [Math.min(...ring.map(p=>p.y)), Math.max(...ring.map(p=>p.y))].map((x) => +x.toFixed(4)) };
+}
+const rest = {};
+for (const n in bones) rest[n] = bones[n].quaternion.clone();
+const pose = params.get("pose") ? JSON.parse(params.get("pose")) : {};
+// pose: { index: [proximal, intermediate, distal] degrees, thumb: [meta, prox, distal], spread: deg, wristX, wristY, wristZ }
+const D = Math.PI / 180;
+for (const [k, chain] of Object.entries(CHAINS)) {
+  const a = pose[k]; if (!a) continue;
+  const joints = k === "thumb" ? chain.slice(0, 3) : chain.slice(1, 4);
+  joints.forEach((n, i) => bones[n].rotateX(-(a[i] || 0) * D)); // + = curl towards the palm
+}
+if (params.get("rot")) { const [x, y, z] = params.get("rot").split(",").map(Number); hand.rotation.set(x * D, y * D, z * D); }
+// chain = "x,y,z;x,y,z;..." outermost first, like nested groups
+if (params.get("chain")) {
+  let parent = scene;
+  for (const e of params.get("chain").split(";")) {
+    const [x, y, z] = e.split(",").map(Number);
+    const g = new THREE.Group(); g.rotation.set(x * D, y * D, z * D); parent.add(g); parent = g;
+  }
+  parent.add(hand);
+}
+if (pose.thumbZ) bones["thumb-metacarpal"].rotateY(pose.thumbZ * D);
+hand.updateMatrixWorld(true);
+scene.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(hand, true);
+const c = box.getCenter(new THREE.Vector3()); const size = box.getSize(new THREE.Vector3());
+const d = Math.max(size.x, size.y, size.z) * 2.6;
+const dirs = { top: [0, 1, 0.001], side: [1, 0, 0], front: [0, 0, 1], back: [0, 0, -1], hero: [0.15, 0.45, 1], cam: [0.1, 0.18, 1] };
+cam.position.copy(c).add(new THREE.Vector3(...dirs[view]).normalize().multiplyScalar(d));
+cam.lookAt(c);
+hand.traverse((o) => { if (o.isMesh) { o.material = new THREE.MeshPhysicalMaterial({ color: 0xf3e6dc, roughness: 0.42, sheen: 0.6, sheenColor: new THREE.Color(0xffd9c7), clearcoat: 0.15 }); o.frustumCulled = false; } if (o.type === 'AxesHelper' || o.isLineSegments) o.visible = !params.has('clean'); });
+renderer.render(scene, cam);
+const info = {};
+for (const n of ["wrist", "index-finger-metacarpal", "index-finger-tip", "thumb-tip", "pinky-finger-tip"]) {
+  const p = bones[n].getWorldPosition(new THREE.Vector3());
+  info[n] = p.toArray().map((v) => +v.toFixed(3));
+}
+info.size = size.toArray().map((v) => +v.toFixed(3));
+document.title = JSON.stringify(window.ringInfo);
+window.done = true;
+</script>
+</body>
+</html>

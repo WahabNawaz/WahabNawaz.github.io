@@ -82,7 +82,4 @@ export function useSky(): SkyMode {
   );
 }
 
-/** Prefix a /public path with the GitHub Pages base path when it is set. */
-export function asset(path: string) {
-  return `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${path}`;
-}
+export { asset } from "./asset";

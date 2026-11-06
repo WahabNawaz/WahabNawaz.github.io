@@ -36,9 +36,11 @@ export const avatar: {
   model: string;
   clips: Partial<Record<AnimState, Clip>>;
 } = {
-  // DUMMY for now: "Hoodie Character" by Quaternius (Ultimate Modular Men
-  // Pack, CC0) with animations from Quaternius' Universal Animation Library
-  // (CC0), retargeted onto it. Swap in your own avatar + clips later (README).
+  // Abdul Wahab's avatar: made with MetaPerson Creator (Avatar SDK) from his own
+  // photo, free export = non-commercial licence (see README "Character").
+  // Outfit recoloured black; black sunglasses come from scene/glasses.ts.
+  // Animations: Quaternius Universal Animation Library (CC0) + the CC0 Wave from
+  // Quaternius' Hoodie Character, retargeted with tools/retarget/retarget-std.mjs.
   enabled: true,
   model: MODEL,
   clips: {
@@ -50,7 +52,7 @@ export const avatar: {
     walk: { file: MODEL, clip: "Walk_Loop", speed: 1.35 },
     run: { file: MODEL, clip: "Jog_Fwd_Loop" },
     jump: { file: MODEL, clip: "Jump_Loop" },
-    wave: { file: MODEL, clip: "CharacterArmature|Wave" },
+    wave: { file: MODEL, clip: "Wave" },
     push: { file: MODEL, clip: "Push_Loop" },
     dance1: { file: MODEL, clip: "Dance_Loop", beats: 2 },
     dance2: { file: MODEL, clip: "Dance_Loop_Mirror", beats: 2 },

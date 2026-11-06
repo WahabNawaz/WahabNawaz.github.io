@@ -15,7 +15,7 @@ export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
   // sitting on the floating rock, centre-left, under the centred headline
-  hero: { x: -0.3, y: -0.34, ry: 0.3, s: 1.25 },
+  hero: { x: -0.3, y: -0.34, ry: 0.42, s: 1.25 },
   // seated at the desk (pitch section)
   desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },

@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>avatar</title>
+<style>html,body{margin:0;background:#8fa9c9;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Model viewer for checking the retargeted clips outside the site:
+// ?file=/public/models/avatar.glb&clips=Idle_Loop,Walk_Loop&t=0.5&view=front|side|three
+// renders one cell per clip at time t (seconds, or "mid" = half way).
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { clone } from "three/addons/utils/SkeletonUtils.js";
+
+const q = new URLSearchParams(location.search);
+const file = q.get("file") || "/public/models/avatar.glb";
+const view = q.get("view") || "front";
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setScissorTest(true);
+document.body.appendChild(renderer.domElement);
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const gltf = await loader.loadAsync(file);
+const names = (q.get("clips") || gltf.animations.map((a) => a.name).join(",")).split(",");
+const env = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const cols = Math.min(names.length, Number(q.get("cols") || 6));
+const rows = Math.ceil(names.length / cols);
+const cw = Math.floor(W / cols), ch = Math.floor(H / rows);
+const info = [];
+names.forEach((name, i) => {
+  const scene = new THREE.Scene();
+  scene.environment = env;
+  scene.background = new THREE.Color(i % 2 ? 0x8fa9c9 : 0x9db4d1);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.2));
+  const sun = new THREE.DirectionalLight(0xfff2e0, 2); sun.position.set(2, 4, 3); scene.add(sun);
+  const model = clone(gltf.scene);
+  scene.add(model);
+  const clip = gltf.animations.find((a) => a.name === name);
+  if (clip) {
+    const mixer = new THREE.AnimationMixer(model);
+    mixer.clipAction(clip).play();
+    const t = q.get("t") === "mid" ? clip.duration / 2 : Number(q.get("t") || 0);
+    mixer.update(t);
+  }
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model, true);
+  const c = box.getCenter(new THREE.Vector3());
+  const cam = new THREE.PerspectiveCamera(30, cw / ch, 0.01, 100);
+  const dir = { front: [0, 0.1, 1], side: [1, 0.1, 0], three: [0.8, 0.25, 1], face: [0, 0, 1] }[view];
+  if (view === "face") {
+    const head = model.getObjectByName("Head").getWorldPosition(new THREE.Vector3());
+    cam.position.copy(head).add(new THREE.Vector3(0, 0.05, 0.75)); cam.lookAt(head.x, head.y + 0.05, head.z);
+  } else {
+    cam.position.copy(c).add(new THREE.Vector3(...dir).normalize().multiplyScalar(5.2)); cam.lookAt(c);
+  }
+  const x = (i % cols) * cw, y = H - (Math.floor(i / cols) + 1) * ch;
+  renderer.setViewport(x, y, cw, ch); renderer.setScissor(x, y, cw, ch);
+  renderer.render(scene, cam);
+  info.push(`${name}:${clip ? "ok" : "missing"}:h${(box.max.y - box.min.y).toFixed(2)}:minY${box.min.y.toFixed(2)}`);
+});
+document.title = info.join(" | ");
+window.done = true;
+</script>
+</body>
+</html>

@@ -16,11 +16,24 @@ export const site = {
   year: "2026",
   // Showreel video for the Playground, e.g. "/video/showreel.mp4" (put the file in /public/video)
   showreel: "" as string,
-  // Optional form service URL (Formspree / Web3Forms). Empty = the contact
-  // form opens the visitor's email app instead. Never put secret keys here.
-  formEndpoint: "" as string,
-  // Two transparent cut-out images floating in the hero sky (e.g. sculpted
-  // hands), e.g. "/hero/hand-left.webp". Leave empty to show none.
+  // Contact form delivery (static hosting, so a form service sends the email).
+  // Pick ONE and fill it in; leave both empty and the form opens the visitor's
+  // email app instead.
+  //  - Web3Forms: get a free access key at https://web3forms.com (it is emailed
+  //    to you), then provider "web3forms" + accessKey "xxxxxxxx-xxxx-...".
+  //    Or leave this file alone and add a GitHub repository variable named
+  //    WEB3FORMS_KEY; the deploy workflow passes it in at build time.
+  //  - Formspree: create a form at https://formspree.io, then provider
+  //    "formspree" + endpoint "https://formspree.io/f/xxxxxxx".
+  // Both values are public by design. Never put a secret key here.
+  form: {
+    provider: (process.env.NEXT_PUBLIC_WEB3FORMS_KEY ? "web3forms" : "") as "" | "web3forms" | "formspree",
+    accessKey: (process.env.NEXT_PUBLIC_WEB3FORMS_KEY || "") as string,
+    endpoint: "" as string,
+  },
+  // Optional extra art: two transparent cut-out images floating in the hero sky,
+  // e.g. "/hero/left.webp". The hero hands are 3D (scene/HeroHands.tsx), so
+  // these stay empty unless you want something more.
   heroArt: { left: "" as string, right: "" as string },
   socials: [
     { label: "LinkedIn", href: "https://www.linkedin.com/" },

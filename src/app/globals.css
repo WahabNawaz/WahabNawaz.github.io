@@ -91,3 +91,18 @@ html.lenis body {
     animation: none;
   }
 }
+
+/* Service illustrations: a slow float, each one a little out of step */
+@keyframes art-float {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.art-float {
+  animation: art-float 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .art-float {
+    animation: none;
+  }
+}

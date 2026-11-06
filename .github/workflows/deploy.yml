@@ -31,7 +31,11 @@ jobs:
         run: npm ci
 
       # Project sites are served from /<repo-name>; a <user>.github.io repo is served from /.
+      # Contact form: add a repository VARIABLE (Settings → Secrets and variables →
+      # Actions → Variables) named WEB3FORMS_KEY with your public Web3Forms access key.
       - name: Build
+        env:
+          NEXT_PUBLIC_WEB3FORMS_KEY: ${{ vars.WEB3FORMS_KEY }}
         run: |
           if [ "${{ github.event.repository.name }}" = "${{ github.repository_owner }}.github.io" ]; then
             export NEXT_PUBLIC_BASE_PATH=""

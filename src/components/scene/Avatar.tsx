@@ -13,6 +13,7 @@ import { avatar, type AnimState } from "@/content/avatar";
 import { animFor, poseFor } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
+import { PalmSeat } from "./HeroHands";
 
 export type AnimRef = { current: AnimState };
 
@@ -204,11 +205,12 @@ function PlaceholderBody({ anim }: { anim: AnimRef }) {
 }
 
 /**
- * Things the avatar uses: a floating rock + laptop (hero, seated typing) and a
- * desk, monitor and chair (section "desk"). Simple shapes made here, no files.
+ * Things the avatar uses: a giant open hand to sit in + laptop (hero, seated
+ * typing) and a desk, monitor and chair (section "desk").
  */
-function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current: string } }) {
-  const rock = useRef<THREE.Group>(null);
+function SeatProps({ seat, place, yaw }: { seat: { current: Seat }; place: { current: string }; yaw: { current: number } }) {
+  const palm = useRef<THREE.Group>(null);
+  const rise = useRef(0);
   const laptop = useRef<THREE.Group>(null);
   const desk = useRef<THREE.Group>(null);
 
@@ -223,26 +225,25 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
     };
     const onRock = place.current === "rock" && w > 0.5;
     const atDesk = place.current === "desk" && w > 0.5;
-    if (rock.current) rock.current.position.set(0, hipY - 0.42, hipZ - 0.2);
+    // the hand rises up from below as the character sits down
+    rise.current += ((onRock ? 1 : 0) - rise.current) * (1 - Math.exp(-dt * (onRock ? 2.2 : 5)));
+    const r = rise.current;
+    if (palm.current) {
+      palm.current.position.set(0.3, hipY - 0.24 - (1 - r) * 2.2, hipZ - 0.42);
+      palm.current.scale.setScalar(Math.max(0.0001, 0.75 + 0.25 * r));
+      palm.current.visible = r > 0.01;
+    }
     if (laptop.current) laptop.current.position.set(0, (hipY + kneeY) / 2 + 0.1, (hipZ + kneeZ) / 2 + 0.14);
     if (desk.current) desk.current.position.set(0, hipY, hipZ);
-    show(rock.current, onRock);
     show(laptop.current, onRock);
     show(desk.current, atDesk);
   });
 
   return (
     <>
-      {/* floating rock to sit on */}
-      <group ref={rock} position={[0, -0.3, -0.05]} scale={0.0001}>
-        <mesh scale={[0.75, 0.32, 0.55]}>
-          <icosahedronGeometry args={[1, 1]} />
-          <meshStandardMaterial color="#8a8f86" roughness={0.95} flatShading />
-        </mesh>
-        <mesh position={[0, 0.2, 0]} scale={[0.7, 0.06, 0.5]}>
-          <sphereGeometry args={[1, 16, 8]} />
-          <meshStandardMaterial color="#6f9b5a" roughness={1} flatShading />
-        </mesh>
+      {/* giant open hand to sit in (HeroHands.tsx) */}
+      <group ref={palm} visible={false}>
+        <PalmSeat yaw={yaw} />
       </group>
 
       {/* laptop on the lap, lid towards the character */}
@@ -312,10 +313,11 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const anim = useRef<AnimState>("typing");
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
   // Opening: on the home page the character walks in from the right once the
-  // preloader lifts, then sits down on its rock. "wait" = still off screen.
+  // preloader lifts, then sits down in the big open hand. "wait" = still off screen.
   const entrance = useRef<"wait" | "walk" | "done">("done");
   const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
   const place = useRef<string>("");
+  const yaw = useRef(0); // the character's current turn, for props that should not turn with it
 
   useFrame((state, dt) => {
     const g = root.current;
@@ -325,7 +327,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     const { section, footer, dance } = sceneStore.get();
     const pose = poseFor(pathname, section, mobile, footer);
     anim.current = animFor(pathname, section, footer, dance);
-    // which seat props to show: rock in the hero, desk in the "desk" section
+    // which seat props to show: the open hand ("rock" spot) in the hero, desk in the "desk" section
     const path = pathname.replace(/\/$/, "") || "/";
     place.current = footer ? "" : section === "hero" || (path === "/" && !section) ? "rock" : section === "desk" ? "desk" : "";
 
@@ -384,6 +386,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     g.position.y += (ty - g.position.y) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
+    yaw.current = g.rotation.y;
     if (hop.current) {
       const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
       hop.current.position.y += (lift - hop.current.position.y) * (1 - Math.exp(-dt * 6));
@@ -405,7 +408,9 @@ export default function Avatar({ pathname }: { pathname: string }) {
                 }}
               />
             </Suspense>
-            <SeatProps seat={seat} place={place} />
+            <Suspense fallback={null}>
+              <SeatProps seat={seat} place={place} yaw={yaw} />
+            </Suspense>
           </>
         ) : (
           <PlaceholderBody anim={anim} />

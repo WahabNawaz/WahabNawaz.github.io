@@ -17,8 +17,12 @@ import { avatar, type AnimState, type Clip } from "@/content/avatar";
 import type { AnimRef } from "./Avatar";
 import { pointer } from "./pointer";
 import { applySit, bindQuats, findSitBones, lookTowards, typingTap } from "./sitPose";
+import { addGlasses } from "./glasses";
 
 const ENTRIES = Object.entries(avatar.clips) as [AnimState, Clip][];
+// every file once: the model first, then any extra clip files. (useGLTF with an
+// array loads each entry separately, so the same file listed twice loads twice.)
+const FILES = [...new Set([avatar.model, ...ENTRIES.map(([, c]) => c.file)])];
 const SEATED: AnimState[] = ["typing", "sit"];
 const NO_LOOK: AnimState[] = ["walk", "run", "jump", "dance1", "dance2", "sitDown", "push"];
 
@@ -38,7 +42,7 @@ const tickMix = (m: Mix, dt: number) => m.mixer.update(dt);
 
 /** What the character is doing, on <html data-avatar="…" data-avatar-look="…">,
  *  for tests and debugging. Written only when it changes. */
-function report(name: "avatar" | "avatarLook", value: string) {
+function report(name: "avatar" | "avatarLook" | "avatarBlinks", value: string) {
   const d = document.documentElement.dataset;
   if (d[name] !== value) d[name] = value;
 }
@@ -71,6 +75,36 @@ function followSong(action: THREE.AnimationAction | null, playing: boolean, time
 
 export type Seat = { w: number; hipY: number; hipZ: number; kneeY: number; kneeZ: number };
 
+/** Face blendshapes (ARKit names) the avatar may have: blinking, a soft smile, the jaw. */
+type Face = { mesh: THREE.Mesh; blinkL?: number; blinkR?: number; jaw?: number; smileL?: number; smileR?: number }[];
+function findFace(scene: THREE.Object3D): Face {
+  const out: Face = [];
+  scene.traverse((o) => {
+    const m = o as THREE.Mesh;
+    const d = m.morphTargetDictionary;
+    if (!m.isMesh || !d || !m.morphTargetInfluences) return;
+    out.push({ mesh: m, blinkL: d.eyeBlinkLeft, blinkR: d.eyeBlinkRight, jaw: d.jawOpen, smileL: d.mouthSmileLeft, smileR: d.mouthSmileRight });
+  });
+  return out;
+}
+function setFace(face: Face, blink: number, smile: number, jaw: number) {
+  for (const f of face) {
+    const w = f.mesh.morphTargetInfluences!;
+    if (f.blinkL !== undefined) w[f.blinkL] = blink;
+    if (f.blinkR !== undefined) w[f.blinkR] = blink;
+    if (f.smileL !== undefined) w[f.smileL] = smile;
+    if (f.smileR !== undefined) w[f.smileR] = smile;
+    if (f.jaw !== undefined) w[f.jaw] = jaw;
+  }
+}
+/** 0 = open, 1 = shut; a quick close and a slower open. */
+function blinkAmount(t: number, at: number) {
+  const d = t - at;
+  if (d < 0 || d > 0.2) return 0;
+  return d < 0.07 ? d / 0.07 : 1 - (d - 0.07) / 0.13;
+}
+const TALKING: AnimState[] = ["talk", "sit"];
+
 /** Where the hips and knees are while seated (avatar units), measured on a copy. */
 function measureSeat(scene: THREE.Object3D, clip: THREE.AnimationClip | undefined, fit: { s: number; y: number }) {
   const bones = findSitBones(scene);
@@ -100,13 +134,13 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
   const typeW = useRef(0);
   const look = useRef({ w: 0, yaw: 0, pitch: 0 });
   const camera = useThree((s) => s.camera);
-  const { scene } = useGLTF(asset(avatar.model));
-  const files = useGLTF(ENTRIES.map(([, c]) => asset(c.file)));
+  const files = useGLTF(FILES.map(asset));
+  const scene = files[0].scene;
 
   const clips = useMemo(
     () =>
-      ENTRIES.flatMap(([state, c], i) => {
-        const gltf = files[i];
+      ENTRIES.flatMap(([state, c]) => {
+        const gltf = files[FILES.indexOf(c.file)];
         const source = c.clip ? gltf.animations.find((a) => a.name === c.clip) : gltf.animations[0];
         if (!source) return [];
         const clip = source.clone();
@@ -134,6 +168,27 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
   const sit = useMemo(() => {
     const bones = findSitBones(scene);
     return { bones, binds: bindQuats(bones) };
+  }, [scene]);
+  const face = useMemo(() => findFace(scene), [scene]);
+  const nextBlink = useRef(1.5);
+  const blinks = useRef(0);
+  const jawW = useRef(0);
+  useEffect(() => {
+    addGlasses(scene);
+    // skinned meshes keep their bind-pose bounds; animated limbs can leave them
+    scene.traverse((o) => {
+      const m = o as THREE.SkinnedMesh;
+      if (!m.isSkinnedMesh) return;
+      m.frustumCulled = false;
+      // eyelash cards: matte, so the studio reflections do not show as white dots
+      const mat = m.material as THREE.MeshStandardMaterial;
+      if (/eyelash/i.test(mat?.name ?? "")) {
+        mat.roughness = 1;
+        mat.metalness = 0;
+        mat.envMapIntensity = 0;
+        mat.color.set("#120d0a");
+      }
+    });
   }, [scene]);
 
   // Normalise any avatar to ~2 units tall with its feet where the placeholder's are,
@@ -180,6 +235,21 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
     if (!avatar.clips[want]?.seated) {
       applySit(sit.bones, sit.binds, animatedBy.get(want) ?? new Set(), g, sitW.current, typeW.current, clock.elapsedTime);
     } else if (want === "typing") typingTap(sit.bones, g, typeW.current, clock.elapsedTime);
+
+    // face: blink every few seconds (now and then twice), a soft smile, and the
+    // jaw moves while it talks
+    if (face.length) {
+      const t = clock.elapsedTime;
+      if (t > nextBlink.current + 0.2) {
+        nextBlink.current = t + 2.2 + Math.random() * 3.6 - (Math.random() < 0.15 ? 2.0 : 0);
+        blinks.current++;
+        report("avatarBlinks", String(blinks.current)); // how many blinks so far (tests)
+      }
+      const talking = TALKING.includes(want) ? 1 : 0;
+      jawW.current += (talking - jawW.current) * k;
+      const jaw = jawW.current * (0.06 + 0.16 * Math.abs(Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1)));
+      setFace(face, blinkAmount(t, nextBlink.current), 0.22, jaw);
+    }
 
     // head follows the mouse: aim from the head's spot on screen
     const L = look.current;

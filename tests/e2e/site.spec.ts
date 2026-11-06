@@ -48,14 +48,22 @@ test.describe("site", () => {
   test("1 · home: loader, entrance, cursor, scroll down and up", async ({ page }, info) => {
     const errors = watchErrors(page);
     const model = page.waitForResponse((r) => r.url().endsWith("/models/avatar.glb"));
+    const hand = page.waitForResponse((r) => r.url().endsWith("/models/hand-left.glb"));
     await page.goto("/");
     await page.waitForTimeout(500);
     await shot(page, info, "01-loader");
     expect((await model).status()).toBe(200);
+    expect((await hand).status()).toBe(200);
 
     await expect(page.locator(".preloader")).toBeHidden({ timeout: 15_000 });
-    // walks in, sits down on the rock, types
+    // walks in, sits down in the big open hand, types
     await expect(avatar(page)).toHaveAttribute("data-avatar", "typing", { timeout: 15_000 });
+    // the pointing hand comes in from the right on wide screens
+    if (!isPhone(info)) await expect(avatar(page)).toHaveAttribute("data-hands", "shown", { timeout: 10_000 });
+    // the avatar blinks every few seconds
+    const blinks = async () => Number((await avatar(page).getAttribute("data-avatar-blinks")) ?? 0);
+    const before = await blinks();
+    await expect.poll(blinks, { timeout: 12_000 }).toBeGreaterThan(before);
     await page.waitForTimeout(1500);
     await expect(page.locator("h1")).toBeVisible();
     await shot(page, info, "02-hero");
@@ -142,6 +150,18 @@ test.describe("site", () => {
     await page.goto("/services/");
     await page.waitForTimeout(1200);
     await shot(page, info, "09-services");
+    // five illustrations, each one loads
+    const art = page.locator("img[data-service-art]");
+    await expect(art).toHaveCount(5);
+    // (they float all the time, so scroll with the DOM: Playwright waits for still elements)
+    const reveal = (i: number) => art.nth(i).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    for (let i = 0; i < 5; i++) {
+      await reveal(i);
+      await expect.poll(() => art.nth(i).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth), { timeout: 10_000 }).toBeGreaterThan(0);
+    }
+    await reveal(0);
+    await page.waitForTimeout(1200);
+    await shot(page, info, "09b-services-art");
     const tabs = page.getByRole("tab");
     await tabs.first().scrollIntoViewIfNeeded();
     expect(await tabs.count()).toBeGreaterThanOrEqual(5);
@@ -212,6 +232,9 @@ test.describe("site", () => {
     await shot(page, info, "12-photography");
     const tile = page.locator("button[data-img]").first();
     await tile.scrollIntoViewIfNeeded();
+    // real photos (lazy-loaded WebP) with a credit line
+    await expect.poll(() => tile.locator("img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth), { timeout: 10_000 }).toBeGreaterThan(0);
+    await expect(page.getByText(/Demo photo/).first()).toBeVisible();
     await tile.click();
     const dialog = page.getByRole("dialog", { name: /photo 1 of/ });
     await expect(dialog).toBeVisible();
@@ -225,6 +248,8 @@ test.describe("site", () => {
     await page.mouse.move(vp.width * 0.3, vp.height / 2, { steps: 6 });
     await page.mouse.up();
     await expect(page.getByRole("dialog", { name: /photo 3 of/ })).toBeVisible();
+    const big = page.getByRole("dialog").locator("img");
+    await expect.poll(() => big.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth), { timeout: 10_000 }).toBeGreaterThan(0);
     await shot(page, info, "13-lightbox");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: /photo \d+ of/ })).toBeHidden();
@@ -300,8 +325,9 @@ test.describe("site", () => {
     await expect(page.locator("#cf-name-err")).toBeHidden();
 
     await page.locator("#cf-email").fill("test@example.com");
+    await expect(page.locator("form[data-form-service]")).toHaveAttribute("data-form-service", "mailto");
     await send.click();
-    // no form service configured (site.formEndpoint is empty) → opens the email app
+    // no form service configured (site.form is empty) → opens the email app
     await expect(page.locator("#cf-status")).toContainText("email app");
     await shot(page, info, "17-contact-sent");
     expect(errors).toEqual([]);
