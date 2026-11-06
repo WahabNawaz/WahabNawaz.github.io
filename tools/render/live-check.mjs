@@ -20,8 +20,8 @@ const b0 = Number(await html.getAttribute("data-avatar-blinks"));
 await page.waitForFunction((n) => Number(document.documentElement.dataset.avatarBlinks) > n, b0, { timeout: 15_000 });
 await page.waitForTimeout(1500);
 await page.screenshot({ path: out });
-// footer wave
+// footer: the character stands by it
 await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-await page.waitForFunction(() => document.documentElement.dataset.avatar === "wave", null, { timeout: 20_000 });
-console.log(JSON.stringify({ glb: res.status(), glbBytes: Number(res.headers()["content-length"] || 0), hero: "typing", hands: "shown", blinked: true, footer: "wave", errors }));
+await page.waitForFunction(() => document.documentElement.dataset.avatar === "idle", null, { timeout: 20_000 });
+console.log(JSON.stringify({ glb: res.status(), glbBytes: Number(res.headers()["content-length"] || 0), hero: "typing", hands: "shown", blinked: true, footer: "idle", errors }));
 await browser.close();
