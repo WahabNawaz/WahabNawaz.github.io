@@ -19,3 +19,5 @@ export function onIntroDone(cb: () => void) {
   waiting.add(cb);
   return () => waiting.delete(cb);
 }
+
+export const isIntroDone = () => done;

@@ -8,6 +8,7 @@ import { useLenis } from "lenis/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import Lightbox from "./Lightbox";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -16,6 +17,7 @@ export type Photo = { id: string; title: string; caption: string; colors: [strin
 export default function Gallery({ photos }: { photos: Photo[] }) {
   const root = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const [open, setOpen] = useState<number | null>(null);
   const lenis = useLenis();
 
   useGSAP(
@@ -68,11 +70,12 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
       <ol className="space-y-24">
         {photos.map((p, i) => (
           <li key={p.id} data-photo className="grid items-end gap-6 md:grid-cols-[1.6fr_1fr]">
-            <div
+            <button
+              type="button"
               data-img
-              role="img"
-              aria-label={`${p.title} (placeholder)`}
-              className="w-full overflow-hidden rounded-xl"
+              onClick={() => setOpen(i)}
+              aria-label={`Open ${p.title} (placeholder)`}
+              className="block w-full cursor-zoom-in overflow-hidden rounded-xl transition-transform duration-500 hover:scale-[1.01]"
               style={{ aspectRatio: p.ratio, background: `radial-gradient(120% 100% at 30% 20%, ${p.colors[1]}, ${p.colors[0]} 60%, #111114)` }}
             />
             <div>
@@ -83,6 +86,8 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
           </li>
         ))}
       </ol>
+
+      {open !== null && <Lightbox photos={photos} index={open} onChange={setOpen} onClose={() => setOpen(null)} />}
     </div>
   );
 }

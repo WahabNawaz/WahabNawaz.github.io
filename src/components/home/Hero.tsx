@@ -23,7 +23,8 @@ export default function Hero() {
       tl.from("[data-line]", { yPercent: 110, duration: 1.1, stagger: 0.08, ease: "power4.out" })
         .from("[data-fade]", { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1 }, 0.45)
         .from("[data-arrow] path", { strokeDashoffset: 120, duration: 1, ease: "power2.out" }, 0.9);
-      return onIntroDone(() => tl.play());
+      // starts just after the character begins walking in and the camera rises
+      return onIntroDone(() => gsap.delayedCall(0.35, () => tl.play()));
     },
     { scope: ref },
   );

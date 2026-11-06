@@ -1,8 +1,10 @@
 "use client";
 
 // "What it's built with": tabs per service, a numbered tool list, and every
-// tool orbiting the 3D character on two rings (GSAP). The section pins while
-// in view so the rings stay centred on the character.
+// tool orbiting the 3D character on two rings. The rings spin slowly by
+// themselves; drag (or swipe) round the ring to spin them, and they coast
+// and slow down after you let go. The section pins while in view so the
+// rings stay centred on the character.
 import { useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -51,26 +53,97 @@ export default function ToolsOrbit() {
   useGSAP(
     () => {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (!reduce) {
-        [1, -1].forEach((dir) => {
-          const duration = dir === 1 ? 60 : 80;
-          gsap.to(`[data-ring="${dir}"]`, { rotation: 360 * dir, duration, ease: "none", repeat: -1 });
-          // chips spin back so their text stays upright
-          gsap.to(`[data-chip="${dir}"]`, { rotation: -360 * dir, duration, ease: "none", repeat: -1 });
+      // one angle drives both rings (outer turns the other way, a bit slower);
+      // chips turn back by the same amount so their text stays upright
+      const set = [1, -1].map((dir) => ({
+        dir,
+        ring: gsap.quickSetter(`[data-ring="${dir}"]`, "rotation", "deg"),
+        chips: gsap.quickSetter(`[data-chip="${dir}"]`, "rotation", "deg"),
+      }));
+      let angle = 0;
+      let vel = 0; // degrees per second, while coasting
+      let dragging = false;
+      const draw = () =>
+        set.forEach(({ dir, ring, chips }) => {
+          const a = dir === 1 ? angle : -angle * 0.75;
+          ring(a);
+          chips(-a);
         });
-      }
-      // pin only on desktop, where the rings are shown
+      const tick = (_t: number, ms: number) => {
+        const dt = ms / 1000;
+        if (!dragging) {
+          if (Math.abs(vel) > 3) {
+            angle += vel * dt;
+            vel *= Math.exp(-dt * 2.2); // friction
+          } else {
+            vel = 0;
+            if (!reduce) angle += dt * 6; // slow spin on its own
+          }
+        }
+        draw();
+      };
+      gsap.ticker.add(tick);
+
+      // Drag round the ring: the angle of the pointer around the ring's centre
+      // (measured on screen, so pinning and scrolling do not matter).
+      const area = root.current?.querySelector<HTMLElement>("[data-spin]");
+      let last = 0;
+      let lastT = 0;
+      const angleAt = (e: PointerEvent) => {
+        const r = area!.getBoundingClientRect();
+        return (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) / Math.PI;
+      };
+      const down = (e: PointerEvent) => {
+        dragging = true;
+        vel = 0;
+        last = angleAt(e);
+        lastT = performance.now();
+        area!.setPointerCapture(e.pointerId);
+        area!.dataset.dragging = "";
+      };
+      const move = (e: PointerEvent) => {
+        if (!dragging) return;
+        const now = performance.now();
+        let d = angleAt(e) - last;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        angle += d;
+        vel = vel * 0.4 + (d / Math.max(0.008, (now - lastT) / 1000)) * 0.6;
+        last += d;
+        lastT = now;
+      };
+      const up = () => {
+        if (!dragging) return;
+        dragging = false;
+        if (performance.now() - lastT > 120) vel = 0; // held still before letting go
+        vel = gsap.utils.clamp(-720, 720, vel);
+        delete area!.dataset.dragging;
+      };
+      area?.addEventListener("pointerdown", down);
+      area?.addEventListener("pointermove", move);
+      area?.addEventListener("pointerup", up);
+      area?.addEventListener("pointercancel", up);
+      const cleanup = () => {
+        gsap.ticker.remove(tick);
+        area?.removeEventListener("pointerdown", down);
+        area?.removeEventListener("pointermove", move);
+        area?.removeEventListener("pointerup", up);
+        area?.removeEventListener("pointercancel", up);
+      };
+
+      // pin only on large screens, where the rings are shown
       const mm = gsap.matchMedia();
-      mm.add("(min-width: 768px)", () => {
+      mm.add("(min-width: 1024px)", () => {
         ScrollTrigger.create({ trigger: root.current, start: "top top", end: "+=80%", pin: true });
       });
+      return cleanup;
     },
     { scope: root },
   );
 
   return (
-    <section ref={root} data-pose="orbit" className="relative overflow-hidden px-5 py-24 md:h-svh md:px-8 md:py-0">
-      <div className="relative z-10 flex h-full flex-col justify-center md:w-[42%]">
+    <section ref={root} data-pose="orbit" className="relative overflow-hidden px-5 py-24 md:px-8 lg:h-svh lg:py-0">
+      <div className="relative z-10 flex h-full flex-col justify-center lg:w-[42%]">
         <Label>What it&apos;s built with</Label>
         <div role="tablist" aria-label="Services" className="mt-6 flex flex-wrap gap-2">
           {services.map((s, i) => (
@@ -99,13 +172,23 @@ export default function ToolsOrbit() {
       </div>
 
       {/* rings: centred where the character stands (poses.ts "orbit": x 0.45 → 72.5% of the width) */}
-      <div aria-hidden className="pointer-events-none absolute left-[72.5%] top-[58%] hidden size-0 md:block">
-        <div className="absolute -left-[22vh] -top-[22vh] size-[44vh] rounded-full border border-dashed border-line" />
-        <div className="absolute -left-[34vh] -top-[34vh] size-[68vh] rounded-full border border-dashed border-line" />
-        <div className="absolute -left-[22vh] -top-[22vh] size-[44vh]">
+      <div aria-hidden className="absolute left-[72.5%] top-[58%] hidden size-0 lg:block">
+        {/* drag surface: the whole outer ring */}
+        <div
+          data-spin
+          className="group absolute -left-[34vh] -top-[34vh] size-[68vh] cursor-grab select-none rounded-full active:cursor-grabbing data-[dragging]:cursor-grabbing"
+          style={{ touchAction: "pan-y" }}
+        >
+          <span className="pointer-events-none absolute bottom-[6%] left-1/2 -translate-x-1/2 rounded-full bg-ink px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-paper opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            Drag to spin
+          </span>
+        </div>
+        <div className="pointer-events-none absolute -left-[22vh] -top-[22vh] size-[44vh] rounded-full border border-dashed border-line" />
+        <div className="pointer-events-none absolute -left-[34vh] -top-[34vh] size-[68vh] rounded-full border border-dashed border-line" />
+        <div className="pointer-events-none absolute -left-[22vh] -top-[22vh] size-[44vh]">
           <Ring tools={INNER} radius="22vh" active={active} dir={1} />
         </div>
-        <div className="absolute -left-[34vh] -top-[34vh] size-[68vh]">
+        <div className="pointer-events-none absolute -left-[34vh] -top-[34vh] size-[68vh]">
           <Ring tools={OUTER} radius="34vh" active={active} dir={-1} />
         </div>
       </div>

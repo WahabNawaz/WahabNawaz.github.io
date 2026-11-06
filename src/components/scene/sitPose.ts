@@ -1,5 +1,6 @@
 // Code-driven "sit" and "seated typing" pose, layered on top of whatever clip
-// is playing. Used when the avatar has no sitting/typing animation of its own.
+// is playing (used when the avatar has no sitting animation of its own), and
+// the head turning towards the mouse.
 // Rotations are given around the character's own right (X) axis, so they
 // work whatever the bone axes of the model are.
 import * as THREE from "three";
@@ -9,6 +10,7 @@ export type SitBones = {
   lowerLegL?: THREE.Bone; lowerLegR?: THREE.Bone;
   upperArmL?: THREE.Bone; upperArmR?: THREE.Bone;
   lowerArmL?: THREE.Bone; lowerArmR?: THREE.Bone;
+  neck?: THREE.Bone;
   head?: THREE.Bone;
 };
 
@@ -22,6 +24,7 @@ const NAMES: Record<keyof SitBones, string[]> = {
   upperArmR: ["UpperArmR", "mixamorigRightArm", "RightArm", "upperarm_r"],
   lowerArmL: ["LowerArmL", "mixamorigLeftForeArm", "LeftForeArm", "lowerarm_l"],
   lowerArmR: ["LowerArmR", "mixamorigRightForeArm", "RightForeArm", "lowerarm_r"],
+  neck: ["Neck", "mixamorigNeck", "neck_01"],
   head: ["Head", "mixamorigHead"],
 };
 
@@ -92,5 +95,40 @@ export function applySit(
     bend(bones.lowerArmL, (-55 + tap) * typing, root);
     bend(bones.lowerArmR, (-55 - tap) * typing, root);
     bend(bones.head, 12 * typing, root);
+  }
+}
+
+const _up = new THREE.Vector3();
+
+/** Small forearm taps, as if typing, on top of a seated clip. */
+export function typingTap(bones: SitBones, root: THREE.Object3D, w: number, t: number) {
+  if (w <= 0.001) return;
+  const tap = Math.sin(t * 17) * 3.5 * w;
+  bend(bones.lowerArmL, tap, root);
+  bend(bones.lowerArmR, -tap, root);
+}
+
+/** Rotate a bone around a world-space axis (in place, after the clip). */
+function rotateWorld(bone: THREE.Bone | undefined, axis: THREE.Vector3, rad: number) {
+  if (!bone || !bone.parent || rad === 0) return;
+  bone.parent.updateWorldMatrix(true, false);
+  bone.parent.getWorldQuaternion(_pq);
+  _rot.setFromAxisAngle(axis, rad);
+  const delta = _pq.clone().invert().multiply(_rot).multiply(_pq);
+  bone.quaternion.premultiply(delta);
+}
+
+/**
+ * Turn neck + head by yaw (left/right, around the character's up axis) and
+ * pitch (up/down, around its right axis), split 40/60 between the two bones.
+ */
+export function lookTowards(bones: SitBones, root: THREE.Object3D, yaw: number, pitch: number) {
+  root.getWorldQuaternion(_rootQ);
+  _up.set(0, 1, 0).applyQuaternion(_rootQ).normalize();
+  _axis.set(1, 0, 0).applyQuaternion(_rootQ).normalize();
+  const split: [THREE.Bone | undefined, number][] = bones.neck ? [[bones.neck, 0.4], [bones.head, 0.6]] : [[bones.head, 1]];
+  for (const [bone, part] of split) {
+    rotateWorld(bone, _axis, pitch * part);
+    rotateWorld(bone, _up, yaw * part);
   }
 }

@@ -8,8 +8,9 @@ import { Float } from "@react-three/drei";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
+import { isIntroDone } from "@/lib/intro";
 import Avatar from "./Avatar";
-import { trackPointer } from "./pointer";
+import { pointer, trackPointer } from "./pointer";
 
 const LIGHT: Record<SkyMode, { key: string; fill: string; keyI: number; ambI: number }> = {
   day: { key: "#fff6e6", fill: "#cfe3ff", keyI: 2.2, ambI: 0.9 },
@@ -66,6 +67,31 @@ function Lights() {
   );
 }
 
+/**
+ * Opening camera move: starts low and further back, rises and settles once
+ * the preloader lifts. After that it drifts a little with the mouse.
+ */
+function CameraRig() {
+  const intro = useRef(-1); // 1 = start of the move, 0 = settled, -1 = not set up yet
+  useFrame(({ camera }, dt) => {
+    if (intro.current < 0) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      intro.current = reduce ? 0 : 1;
+      camera.position.set(0, -1.6 * intro.current, 10 + 2.5 * intro.current);
+    }
+    if (isIntroDone()) intro.current += (0 - intro.current) * (1 - Math.exp(-dt * 1.6));
+    const i = intro.current;
+    const k = 1 - Math.exp(-dt * 4);
+    const tx = pointer.x * 0.18;
+    const ty = -1.6 * i + pointer.y * 0.1;
+    camera.position.x += (tx - camera.position.x) * k;
+    camera.position.y = i > 0.01 ? ty : camera.position.y + (ty - camera.position.y) * k;
+    camera.position.z = 10 + 2.5 * i;
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
 export function Shapes() {
   // decorative floating objects; only shown while the hero is in view
   const group = useRef<THREE.Group>(null);
@@ -118,6 +144,7 @@ export default function Scene({ pathname }: { pathname: string }) {
       aria-hidden
     >
       <StudioEnv />
+      <CameraRig />
       <Lights />
       <Avatar pathname={pathname} />
       {/* decorative floating shapes are off now that the hero has the rock;

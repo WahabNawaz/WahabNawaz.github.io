@@ -94,9 +94,15 @@ export default function Preloader() {
 
       <div className="overflow-hidden">
         <p className="font-display text-[15vw] font-semibold uppercase leading-[0.9] tracking-tight md:text-[10vw]">
-          {site.name.split("").map((c, i) => (
-            <span key={i} data-char className="inline-block whitespace-pre">
-              {c}
+          {/* letters are grouped per word, so a narrow screen breaks between words */}
+          {site.name.split(" ").map((word, w) => (
+            <span key={w} className="inline-block whitespace-nowrap">
+              {w > 0 && <span className="inline-block whitespace-pre"> </span>}
+              {word.split("").map((c, i) => (
+                <span key={i} data-char className="inline-block">
+                  {c}
+                </span>
+              ))}
             </span>
           ))}
         </p>

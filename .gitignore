@@ -42,3 +42,9 @@ next-env.d.ts
 
 # local test models (never commit)
 /public/models/_test
+
+# playwright
+/test-results/
+/tests/report/
+/tests/screenshots/
+/playwright/.cache/

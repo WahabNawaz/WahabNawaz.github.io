@@ -14,6 +14,7 @@ export type Track = {
 
 export const tracks: Track[] = [
   { id: "demo", title: "Demo beat", artist: "Generated in your browser", bpm: 112, dance: "dance1" },
+  { id: "demo-slow", title: "Demo beat (slow)", artist: "Generated in your browser", bpm: 92, dance: "dance2" },
   // { id: "song-1", title: "Song title", artist: "Artist", src: "/audio/song-1.mp3", bpm: 120, dance: "dance1" },
   // { id: "song-2", title: "Song title", artist: "Artist", src: "/audio/song-2.mp3", bpm: 96, dance: "dance2" },
 ];

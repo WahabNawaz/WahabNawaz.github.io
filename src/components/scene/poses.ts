@@ -15,7 +15,7 @@ export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
   // sitting on the floating rock, centre-left, under the centred headline
-  hero: { x: -0.3, y: -0.4, ry: 0.3, s: 1.25 },
+  hero: { x: -0.3, y: -0.34, ry: 0.3, s: 1.25 },
   // seated at the desk (pitch section)
   desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
@@ -36,7 +36,7 @@ const PAGES: Record<string, Pose> = {
   "/about": { x: -0.7, y: -0.5, ry: 0.6, s: 0.6 },
   "/faq": { x: 0.74, y: -0.55, ry: -0.5, s: 0.52 },
   "/photography": { x: 0.74, y: -0.55, ry: -0.5, s: 0.5 },
-  "/contact": { x: 0.0, y: -0.42, ry: 0.0, s: 0.95 },
+  "/contact": { x: 0.74, y: -0.5, ry: -0.5, s: 0.62 },
   "/playground": { x: 0.0, y: -0.3, ry: 0.0, s: 1.0 },
 };
 
@@ -57,7 +57,8 @@ export function poseFor(pathname: string, section: string | null, mobile: boolea
   if (mobile) {
     if (section === "hero") return MOBILE_HERO;
     if (path === "/contact") return { ...PAGES["/contact"], s: 0.6 };
-    if (path === "/playground") return { x: 0, y: -0.3, ry: 0, s: 0.75 };
+    // in the gap between the big title and the music player
+    if (path === "/playground") return { x: 0, y: 0.14, ry: 0, s: 0.66 };
     return MOBILE_CORNER;
   }
   if (section && NAMED[section]) return NAMED[section];
@@ -70,14 +71,15 @@ export function poseFor(pathname: string, section: string | null, mobile: boolea
 const SECTION_ANIM: Record<string, AnimState> = {
   hero: "typing",
   desk: "typing",
-  name: "jump",
+  name: "run",
   role: "wave",
   orbit: "idle",
 };
 const PAGE_ANIM: Record<string, AnimState> = {
   "/contact": "wave",
   "/playground": "idle",
-  "/about": "sit",
+  "/about": "talk",
+  "/faq": "talk",
 };
 
 export function animFor(
@@ -91,5 +93,5 @@ export function animFor(
   if (footer) return "wave";
   if (section && SECTION_ANIM[section]) return SECTION_ANIM[section];
   if (PAGE_ANIM[path]) return PAGE_ANIM[path];
-  return "typing";
+  return "idle";
 }

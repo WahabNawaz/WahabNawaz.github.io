@@ -8,6 +8,7 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
+import { isIntroDone } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
 import { animFor, poseFor } from "./poses";
 import { pointer } from "./pointer";
@@ -69,7 +70,7 @@ function PlaceholderBody({ anim }: { anim: AnimRef }) {
     } else if (state === "wave") {
       rz = -2.5 + Math.sin(t * 9) * 0.35;
       rx = -0.2;
-    } else if (state === "jump") {
+    } else if (state === "jump" || state === "run" || state === "walk") {
       const hop = Math.abs(Math.sin(t * 3.2));
       by = hop * 0.55;
       lz = 0.3 + hop * 1.6;
@@ -212,7 +213,7 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
   const desk = useRef<THREE.Group>(null);
 
   useFrame((_, dt) => {
-    const { w, hipY } = seat.current;
+    const { w, hipY, hipZ, kneeY, kneeZ } = seat.current;
     const k = 1 - Math.exp(-dt * 6);
     const show = (g: THREE.Group | null, on: boolean) => {
       if (!g) return;
@@ -222,9 +223,9 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
     };
     const onRock = place.current === "rock" && w > 0.5;
     const atDesk = place.current === "desk" && w > 0.5;
-    if (rock.current) rock.current.position.y = hipY - 0.16;
-    if (laptop.current) laptop.current.position.y = hipY + 0.08;
-    if (desk.current) desk.current.position.y = hipY;
+    if (rock.current) rock.current.position.set(0, hipY - 0.42, hipZ - 0.2);
+    if (laptop.current) laptop.current.position.set(0, (hipY + kneeY) / 2 + 0.1, (hipZ + kneeZ) / 2 + 0.14);
+    if (desk.current) desk.current.position.set(0, hipY, hipZ);
     show(rock.current, onRock);
     show(laptop.current, onRock);
     show(desk.current, atDesk);
@@ -245,7 +246,7 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
       </group>
 
       {/* laptop on the lap, lid towards the character */}
-      <group ref={laptop} position={[0, 0, 0.32]} scale={0.0001}>
+      <group ref={laptop} scale={0.0001}>
         <RoundedBox args={[0.5, 0.025, 0.34]} radius={0.01}>
           <meshStandardMaterial color={C.laptop} metalness={0.6} roughness={0.35} />
         </RoundedBox>
@@ -309,7 +310,11 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const hop = useRef<THREE.Group>(null);
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
-  const seat = useRef<Seat>({ w: 0, hipY: -0.1 });
+  const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
+  // Opening: on the home page the character walks in from the right once the
+  // preloader lifts, then sits down on its rock. "wait" = still off screen.
+  const entrance = useRef<"wait" | "walk" | "done">("done");
+  const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
   const place = useRef<string>("");
 
   useFrame((state, dt) => {
@@ -329,17 +334,50 @@ export default function Avatar({ pathname }: { pathname: string }) {
     const tx = (pose.x * viewport.width) / 2;
     const ty = (pose.y * viewport.height) / 2;
     const ts = (pose.s * viewport.height) / 5;
-    // first frame: appear in place (only the size animates in)
+    // first frame: on the home hero, wait off screen for the walk-in;
+    // anywhere else appear in place (only the size animates in)
     if (!placed.current) {
-      g.position.set(tx, ty, 0);
-      g.rotation.y = pose.ry;
       placed.current = true;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (path === "/" && section !== "desk" && !footer && !reduce) {
+        entrance.current = "wait";
+        g.position.set(viewport.width / 2 + ts * 0.8, ty, 0);
+        g.rotation.y = -Math.PI / 2;
+        g.scale.setScalar(ts);
+      } else {
+        g.position.set(tx, ty, 0);
+        g.rotation.y = pose.ry;
+      }
+    }
+
+    if (entrance.current !== "done") {
+      // scrolled away or left the page mid-entrance: carry on as normal
+      if (path !== "/" || (section && section !== "hero") || footer) entrance.current = "done";
+      else if (entrance.current === "wait") {
+        anim.current = "idle";
+        if (isIntroDone() && ready.current) entrance.current = "walk";
+        return;
+      } else {
+        const dx = tx - g.position.x;
+        const step = ts * 1.75 * dt; // walking pace, scaled with the character
+        anim.current = "walk";
+        g.scale.setScalar(ts);
+        g.position.y = ty;
+        if (Math.abs(dx) <= step) {
+          g.position.x = tx;
+          entrance.current = "done";
+        } else {
+          g.position.x += Math.sign(dx) * step;
+          g.rotation.y += (Math.sign(dx) * (Math.PI / 2) - g.rotation.y) * (1 - Math.exp(-dt * 8));
+          return;
+        }
+      }
     }
     // Travelling to a new spot: run, face the way it goes and jump in an arc.
     const dx = tx - g.position.x;
     const dist = Math.hypot(dx, ty - g.position.y);
     const travelling = dist > viewport.height * 0.06 && !(dance.active && path === "/playground");
-    if (travelling) anim.current = "jump";
+    if (travelling) anim.current = "run";
     const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : pose.ry + pointer.x * 0.15;
 
     g.position.x += dx * k;
@@ -357,8 +395,15 @@ export default function Avatar({ pathname }: { pathname: string }) {
       <group ref={hop}>
         {avatar.enabled ? (
           <>
-            <Suspense fallback={<PlaceholderBody anim={anim} />}>
-              <AvatarRig anim={anim} onSeat={(s) => (seat.current = s)} />
+            {/* nothing while the avatar file loads (the walk-in waits for it) */}
+            <Suspense fallback={null}>
+              <AvatarRig
+                anim={anim}
+                onSeat={(s) => {
+                  seat.current = s;
+                  ready.current = true;
+                }}
+              />
             </Suspense>
             <SeatProps seat={seat} place={place} />
           </>

@@ -16,6 +16,9 @@ export const site = {
   year: "2026",
   // Showreel video for the Playground, e.g. "/video/showreel.mp4" (put the file in /public/video)
   showreel: "" as string,
+  // Optional form service URL (Formspree / Web3Forms). Empty = the contact
+  // form opens the visitor's email app instead. Never put secret keys here.
+  formEndpoint: "" as string,
   // Two transparent cut-out images floating in the hero sky (e.g. sculpted
   // hands), e.g. "/hero/hand-left.webp". Leave empty to show none.
   heroArt: { left: "" as string, right: "" as string },

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLenis } from "lenis/react";
+import gsap from "gsap";
+import { onIntroDone } from "@/lib/intro";
 import { nav, site } from "@/content/site";
 import RollText from "./RollText";
 import SoundToggle from "./SoundToggle";
@@ -18,19 +21,57 @@ export default function Header() {
     setOpenedOn(next ? pathname : null);
   };
 
+  const lenis = useLenis();
+  const menuBtn = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLElement>(null);
+
+  // Opening: the bar slides in last, after the character and the headline.
+  useEffect(() => {
+    const el = bar.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.set(el, { yPercent: -120, autoAlpha: 0 });
+    return onIntroDone(() => gsap.to(el, { yPercent: 0, autoAlpha: 1, duration: 0.9, delay: 0.9, ease: "power3.out" }));
+  }, []);
+
+  // While open: no page scrolling, focus moves into the menu and Tab stays
+  // inside it; Escape closes and focus returns to the Menu button.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpenedOn(null);
+    lenis?.stop();
+    const links = () => [menuBtn.current, ...(panel.current?.querySelectorAll<HTMLElement>("a") ?? [])].filter(Boolean) as HTMLElement[];
+    const t = setTimeout(() => panel.current?.querySelector<HTMLElement>("a")?.focus(), 350);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenedOn(null);
+      if (e.key === "Tab") {
+        const els = links();
+        const i = els.indexOf(document.activeElement as HTMLElement);
+        if (e.shiftKey && i <= 0) {
+          e.preventDefault();
+          els[els.length - 1]?.focus();
+        } else if (!e.shiftKey && i === els.length - 1) {
+          e.preventDefault();
+          els[0]?.focus();
+        }
+      }
+    };
+    const btn = menuBtn.current;
+    const box = panel.current;
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
+      lenis?.start();
+      if (box?.contains(document.activeElement)) btn?.focus();
+    };
+  }, [open, lenis]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href.replace(/\/$/, ""));
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-5 py-4 mix-blend-difference text-white md:px-8">
+      <header ref={bar} className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-5 py-4 mix-blend-difference text-white md:px-8">
         <Link href="/" className="flex items-center gap-3" aria-label={`${site.name}, home`}>
           <span className="grid size-9 place-items-center rounded-full border border-white font-mono text-xs">
             {site.shortName}
@@ -42,6 +83,7 @@ export default function Header() {
         <div className="flex items-center gap-6">
           <SoundToggle />
           <button
+            ref={menuBtn}
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
@@ -54,6 +96,7 @@ export default function Header() {
       </header>
 
       <div
+        ref={panel}
         id="site-menu"
         role="dialog"
         aria-modal="true"
