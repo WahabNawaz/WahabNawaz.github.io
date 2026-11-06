@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { testimonials } from "@/content/data";
 
-export default function Testimonials() {
+export default function Testimonials({ plain = false }: { plain?: boolean }) {
   const [i, setI] = useState(0);
   const n = testimonials.length;
   const t = testimonials[i];
   const go = (d: number) => setI((v) => (v + d + n) % n);
 
   return (
-    <div className="rounded-3xl border border-line bg-white/60 p-8 backdrop-blur md:p-12">
+    <div className={plain ? "" : "rounded-3xl border border-line bg-white/60 p-8 backdrop-blur md:p-12"}>
       <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-muted">
         <span>What clients say</span>
         <div className="flex items-center gap-3">
@@ -26,7 +26,7 @@ export default function Testimonials() {
         </div>
       </div>
       <blockquote key={i} className="mt-10 animate-[fadeIn_.5s_ease]">
-        <p className="font-display text-3xl font-medium leading-tight tracking-tight md:text-4xl">“{t.quote}”</p>
+        <p className={`font-display font-medium leading-tight tracking-tight ${plain ? "text-xl md:text-2xl" : "text-3xl md:text-4xl"}`}>“{t.quote}”</p>
         <footer className="mt-6 font-mono text-xs uppercase tracking-widest">
           {t.name} · <span className="text-muted">{t.company}</span> · ★ 5.0
         </footer>

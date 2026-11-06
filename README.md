@@ -107,8 +107,10 @@ MIT, © 2019 Amazon), posed joint by joint in code, with a forearm added so the 
 
 Home sequence: soft cloud sky (`scene/Sky.tsx`) → big name, the character pushing a floating shelf with a
 developer's setup across the sky → the statement under northern lights → the next section comes up over the sky like a page
-with its corner folded over (`home/Pitch.tsx`), the character at his desk on a white gaming chair → role → service band → work → clients → services (sticky
-heading, illustrations) → process → footer at sunset.
+with its corner folded over (`home/Pitch.tsx`), the character at his desk on a white gaming chair → role (he
+stands in the big title) → sage-green service band with slanted edges (he dives over it) → work (the scroll
+moves him across the rows) → clients (he falls) → services (sticky heading, illustrations; he explains) →
+brand panel (orange AW tile, project collage) → process (a line draws itself; he runs along it) → footer at sunset.
 
 ## Service illustrations
 

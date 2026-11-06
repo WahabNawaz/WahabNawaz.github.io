@@ -1,31 +1,46 @@
 "use client";
 
-// Process steps as cards that stick and stack on top of each other while you
-// scroll; the card underneath shrinks back a little (GSAP scrub).
+// "How a project runs": the steps sit left and right of a thin curving line
+// that draws itself as you scroll (stroke-dashoffset, GSAP scrub). The 3D
+// character runs along the same line (Avatar.tsx reads [data-process-path]).
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { process } from "@/content/data";
-import { Label } from "@/components/ui";
+import { lorem } from "@/content/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const COLORS = ["#ff6a3d", "#3d5aff", "#1f9d74", "#9b3dff"];
+// a loose S-curve down the whole section (viewBox 100 x 1000, stretched)
+const PATH = "M 50 0 C 50 60, 82 90, 80 160 S 22 300, 24 380 S 78 520, 76 610 S 24 760, 26 840 S 52 960, 50 1000";
 
 export default function ProcessStack() {
   const root = useRef<HTMLElement>(null);
+  const line = useRef<SVGPathElement>(null);
 
   useGSAP(
     () => {
-      const cards = gsap.utils.toArray<HTMLElement>("[data-step]", root.current);
-      cards.forEach((card, i) => {
-        if (i === cards.length - 1) return;
-        gsap.to(card, {
-          scale: 0.92,
-          opacity: 0.55,
-          ease: "none",
-          scrollTrigger: { trigger: cards[i + 1], start: "top bottom", end: "top 20%", scrub: true },
+      const path = line.current;
+      if (!path) return;
+      const len = path.getTotalLength();
+      gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(path, { strokeDashoffset: 0 });
+        return;
+      }
+      gsap.to(path, {
+        strokeDashoffset: 0,
+        ease: "none",
+        scrollTrigger: { trigger: "[data-steps]", start: "top 70%", end: "bottom 60%", scrub: 0.5 },
+      });
+      gsap.utils.toArray<HTMLElement>("[data-step]", root.current).forEach((el) => {
+        gsap.from(el, {
+          y: 40,
+          autoAlpha: 0,
+          duration: 0.9,
+          ease: "power3.out",
+          scrollTrigger: { trigger: el, start: "top 80%", once: true },
         });
       });
     },
@@ -33,31 +48,34 @@ export default function ProcessStack() {
   );
 
   return (
-    <section ref={root} data-pose="left" className="px-5 py-32 md:px-8 md:pl-[26%]">
-      <Label>How a project runs</Label>
-      <h2 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-        Four steps, nothing hidden.
-      </h2>
-      <ol className="mt-16">
-        {process.map((p, i) => (
-          <li key={p.step} data-step className="sticky mb-8 origin-top" style={{ top: `${96 + i * 18}px` }}>
-            <div className={`grid gap-6 rounded-3xl bg-white p-6 shadow-sm md:grid-cols-2 md:p-8 ${i % 2 ? "md:[direction:rtl]" : ""}`}>
-              {/* media slot: put a short video or image here */}
-              <div
-                className="grid aspect-video place-items-center rounded-2xl font-mono text-xs uppercase tracking-widest text-white/80 [direction:ltr]"
-                style={{ background: `linear-gradient(135deg, ${COLORS[i % COLORS.length]}, #111114)` }}
-              >
-                Video / image
+    <section ref={root} data-pose="process" className="px-5 py-32 md:px-8">
+      <div className="flex flex-wrap items-end justify-between gap-8">
+        <h2 className="max-w-xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">How a project runs</h2>
+        <p className="max-w-xs text-sm leading-relaxed text-ink/70">{lorem.sentence}</p>
+      </div>
+
+      <div data-steps className="relative mt-20">
+        <svg aria-hidden className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" viewBox="0 0 100 1000" preserveAspectRatio="none">
+          <path ref={line} data-process-path d={PATH} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" className="text-ink/70" />
+        </svg>
+        <ol className="relative grid gap-24 md:gap-0">
+          {process.map((p, i) => (
+            <li
+              key={p.step}
+              data-step
+              className={`md:flex md:min-h-[62svh] md:items-center ${i % 2 ? "md:justify-end md:pr-[8%]" : "md:justify-start md:pl-[8%]"}`}
+            >
+              <div className="max-w-sm">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted">
+                  Step {p.step} · {p.title}
+                </span>
+                <h3 className="mt-3 font-display text-4xl font-semibold leading-tight tracking-tight">{lorem.short}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink/70">{p.text}</p>
               </div>
-              <div className="flex flex-col justify-center [direction:ltr]">
-                <span className="font-mono text-xs text-accent">Step {p.step}</span>
-                <h3 className="mt-3 font-display text-4xl font-semibold tracking-tight">{p.title}</h3>
-                <p className="mt-3 text-ink/70">{p.text}</p>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ol>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

@@ -3,6 +3,7 @@ import Hero from "@/components/home/Hero";
 import NameScroll from "@/components/home/NameScroll";
 import Pitch from "@/components/home/Pitch";
 import ProcessStack from "@/components/home/ProcessStack";
+import BrandPanel from "@/components/home/BrandPanel";
 import SkyStage from "@/components/home/SkyStage";
 import RoleSection from "@/components/home/RoleSection";
 import ServiceBand from "@/components/home/ServiceBand";
@@ -53,7 +54,7 @@ export default function Home() {
 
       {/* Services: the heading stays put on the left while each service, with
           its illustration, scrolls past on the right */}
-      <section data-pose="right" className="px-5 py-32 md:px-8 md:pr-[22%]">
+      <section data-pose="services" className="px-5 py-32 md:px-8 md:pr-[22%]">
         <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr]">
           <div className="md:sticky md:top-28 md:self-start">
             <h2 className="max-w-md font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-6xl">
@@ -85,6 +86,8 @@ export default function Home() {
           </ol>
         </div>
       </section>
+
+      <BrandPanel />
 
       <ProcessStack />
     </PoseScope>

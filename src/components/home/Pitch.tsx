@@ -9,6 +9,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Testimonials from "@/components/Testimonials";
+import { lorem } from "@/content/site";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -72,7 +73,7 @@ export default function Pitch() {
     <section
       ref={root}
       data-pose="desk"
-      className="relative z-10 -mt-[100svh] grid min-h-svh gap-12 bg-paper px-5 py-32 md:grid-cols-[1.1fr_1fr] md:px-8 md:pl-[34%]"
+      className="relative z-10 -mt-[100svh] min-h-[112svh] bg-paper px-5 py-28 md:px-8"
     >
       {/* the folded-over corner (back of the page), lit from the top left */}
       <div
@@ -86,25 +87,40 @@ export default function Pitch() {
           style={{ background: "linear-gradient(135deg, #ffffff 0%, #f1ece2 45%, #d9d1c2 75%, #b9b0a1 100%)" }}
         />
       </div>
-      <div>
-        <h2 className="font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          {LINES.map((l) => (
-            <span key={l} data-pitch className="block">
-              {l}
-            </span>
-          ))}
-        </h2>
-        <ul data-points className="mt-10 space-y-3">
-          {POINTS.map((p) => (
-            <li key={p} data-point className="flex items-center gap-3 font-mono text-xs uppercase tracking-widest">
-              <span className="size-2 rounded-full bg-accent" /> {p}
-            </li>
-          ))}
-        </ul>
+      {/* laid out like the reference: headline top left over the desk scene, a
+          note pointing at the character, reviews on the right, proof points
+          bottom left, a closing line bottom right (all placeholder copy) */}
+      <h2 className="relative z-10 font-display text-5xl font-semibold leading-[0.95] tracking-tight md:absolute md:left-8 md:top-24 md:max-w-[36rem] md:text-6xl lg:text-7xl">
+        {LINES.map((l) => (
+          <span key={l} data-pitch className="block">
+            {l}
+          </span>
+        ))}
+      </h2>
+      <div aria-hidden className="pointer-events-none absolute left-[40%] top-[17%] hidden items-start gap-2 md:flex">
+        <svg width="70" height="56" viewBox="0 0 70 56" fill="none" className="mt-3 text-ink">
+          <path d="M66 6C46 4 22 14 10 44" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M4 36l6 10 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="max-w-[11rem] text-sm leading-snug">
+          Me, lorem ipsum
+          <br />
+          dolor sit amet.
+        </p>
       </div>
-      <div className="self-end">
-        <Testimonials />
+      <div className="relative z-10 mt-12 md:absolute md:right-8 md:top-[16%] md:mt-0 md:w-[30%]">
+        <Testimonials plain />
       </div>
+      <ul data-points className="relative z-10 mt-12 space-y-2 md:absolute md:bottom-14 md:left-8 md:mt-0">
+        {POINTS.map((pt) => (
+          <li key={pt} data-point className="flex items-center gap-3 text-sm">
+            <span className="size-1.5 rounded-full bg-accent" /> {pt}
+          </li>
+        ))}
+      </ul>
+      <p className="relative z-10 mt-8 max-w-xs text-sm leading-relaxed text-ink/70 md:absolute md:bottom-14 md:right-8 md:mt-0">
+        {lorem.sentence}
+      </p>
     </section>
   );
 }

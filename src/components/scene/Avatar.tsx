@@ -370,7 +370,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     // Scroll-driven sections (work, clients): the scroll position inside the
     // section moves the character; phones keep him in the corner instead.
     let scrubbed: ReturnType<typeof scrollPose> = null;
-    if (!mobile && !footer && path === "/" && (section === "work" || section === "clients")) {
+    if (!mobile && !footer && path === "/" && (section === "work" || section === "clients" || section === "band")) {
       const el = document.querySelector<HTMLElement>(`[data-pose="${section}"]`);
       if (el) {
         const r = el.getBoundingClientRect();
@@ -379,6 +379,36 @@ export default function Avatar({ pathname }: { pathname: string }) {
       if (scrubbed) {
         tx = (scrubbed.x * viewport.width) / 2;
         ty = (scrubbed.y * viewport.height) / 2;
+      }
+    }
+    // Process: he runs along the line drawn down the section, staying a little
+    // below the middle of the screen (the point of the path at that height).
+    if (!mobile && !footer && path === "/" && section === "process") {
+      const line = document.querySelector<SVGPathElement>("[data-process-path]");
+      const ctm = line?.getScreenCTM();
+      if (line && ctm) {
+        const len = line.getTotalLength();
+        const want = innerHeight * 0.66;
+        const at = (l: number) => line.getPointAtLength(l).matrixTransform(ctm);
+        let lo = 0, hi = len;
+        for (let i = 0; i < 18; i++) {
+          const mid = (lo + hi) / 2;
+          if (at(mid).y < want) lo = mid;
+          else hi = mid;
+        }
+        const pt = at(lo);
+        const ahead = at(Math.min(len, lo + len * 0.01));
+        if (pt.y > -50 && pt.y < innerHeight + 50) {
+          scrubbed = {
+            x: (pt.x / innerWidth) * 2 - 1,
+            y: -((pt.y / innerHeight) * 2 - 1) + 0.23, // feet on the line
+            ry: ahead.x >= pt.x ? 1.2 : -1.2,
+            s: 0.55,
+            roll: 0,
+          };
+          tx = (scrubbed.x * viewport.width) / 2;
+          ty = (scrubbed.y * viewport.height) / 2;
+        }
       }
     }
 

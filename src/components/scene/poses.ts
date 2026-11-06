@@ -19,7 +19,7 @@ export const NAMED: Record<string, Pose> = {
   // see HeroHands.tsx; x and y here are only used before the hand is ready)
   hero: { x: -0.2, y: -0.2, ry: 0.6, s: 1.1 },
   // seated at the desk (pitch section)
-  desk: { x: -0.58, y: -0.2, ry: 0.85, s: 1.05 },
+  desk: { x: -0.36, y: -0.2, ry: 0.8, s: 1.15 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
   right: { x: 0.66, y: -0.3, ry: -0.65, s: 0.72 },
   "right-high": { x: 0.68, y: 0.15, ry: -0.7, s: 0.6 },
@@ -31,6 +31,13 @@ export const NAMED: Record<string, Pose> = {
   // work / clients: these two are moved by the scroll (see scrollPose below);
   // these are only the resting spots
   work: { x: 0.7, y: -0.4, ry: -0.5, s: 0.6 },
+  band: { x: 0.3, y: -0.4, ry: 1.2, s: 0.66 },
+  // services list: in the right-hand margin, explaining
+  services: { x: 0.84, y: -0.42, ry: -0.7, s: 0.62 },
+  // brand panel: standing at the bottom of the orange tile, waving
+  brand: { x: -0.12, y: -0.5, ry: 0.5, s: 0.6 },
+  // process: runs along the drawn line (Avatar.tsx), this is the fallback
+  process: { x: 0.5, y: -0.4, ry: -0.5, s: 0.55 },
   clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
   // standing in the middle of the big role title, on its own shadow
   role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
@@ -84,6 +91,10 @@ const SECTION_ANIM: Record<string, AnimState> = {
   role: "idle",
   work: "jump",
   clients: "jump",
+  band: "jump",
+  services: "talk",
+  brand: "wave",
+  process: "run",
   orbit: "idle",
 };
 const PAGE_ANIM: Record<string, AnimState> = {
@@ -110,11 +121,16 @@ export function animFor(
 /**
  * Sections where the scroll position moves the character (0..1 = the section
  * entering at the bottom .. leaving at the top), like the reference:
+ * - band: he dives off the role title over the service cards;
  * - work: he leaps across the project rows, left to right, bouncing;
  * - clients: he drops from the top to the bottom, turning as he falls.
  */
 export function scrollPose(section: string | null, p: number): (Pose & { roll: number }) | null {
   const c = Math.min(1, Math.max(0, p));
+  if (section === "band") {
+    // a dive from the role title, over the cards, down towards the work section
+    return { x: 0.02 + c * 0.55, y: 0.05 - c * 0.85, ry: 1.25, s: 0.66, roll: -c * 1.1 };
+  }
   if (section === "work") {
     const bounce = Math.abs(Math.sin(c * Math.PI * 3));
     return { x: -0.78 + c * 1.56, y: -0.45 + bounce * 0.35, ry: 1.25, s: 0.62, roll: 0 };

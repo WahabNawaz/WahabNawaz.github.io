@@ -1,11 +1,17 @@
 // Moving band of service cards, each with an "Open for projects" badge.
+// Sage green with slanted top and bottom edges that cut into the sections
+// around it, like the reference.
 import Marquee from "@/components/Marquee";
 import { services } from "@/content/data";
 import ServiceArt from "@/components/ServiceArt";
 
 export default function ServiceBand() {
   return (
-    <section aria-label="Services" className="bg-[#e8e3d6] py-10 text-ink">
+    <section
+      aria-label="Services"
+      data-pose="band"
+      className="relative z-10 -my-16 bg-[#d6e3bf] py-28 text-ink [clip-path:polygon(0_9%,100%_0,100%_91%,0_100%)]"
+    >
       <div className="mb-6 flex items-center justify-between px-5 font-mono text-[11px] uppercase tracking-widest md:px-8">
         <span className="flex items-center gap-2">
           Live <span className="size-2 animate-pulse rounded-full bg-accent" />
@@ -14,7 +20,7 @@ export default function ServiceBand() {
       </div>
       <Marquee duration={45}>
         {services.map((s, i) => (
-          <article key={s.id} className="mx-3 flex w-[78vw] max-w-md shrink-0 flex-col justify-between gap-6 rounded-3xl bg-white/70 p-7 shadow-sm md:w-[30vw]">
+          <article key={s.id} className="mx-3 flex w-[78vw] max-w-md shrink-0 flex-col justify-between gap-6 rounded-3xl border border-ink/10 bg-white/45 p-7 backdrop-blur-sm md:w-[30vw]">
             <ServiceArt id={s.id} delay={i * 1.3} sizes="(min-width: 768px) 28vw, 75vw" className="-mx-2 -mt-3" />
             <div>
               <p className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{s.kicker} —</p>
