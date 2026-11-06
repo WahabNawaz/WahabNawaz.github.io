@@ -14,6 +14,7 @@ import { animFor, poseFor } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
+import Laptop from "./Laptop";
 
 export type AnimRef = { current: AnimState };
 
@@ -236,20 +237,9 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
   return (
     <>
 
-      {/* laptop on the lap, lid towards the character */}
+      {/* crystal laptop on the lap, lid towards the character (Laptop.tsx) */}
       <group ref={laptop} scale={0.0001}>
-        <RoundedBox args={[0.5, 0.025, 0.34]} radius={0.01}>
-          <meshStandardMaterial color={C.laptop} metalness={0.6} roughness={0.35} />
-        </RoundedBox>
-        <group position={[0, 0.01, 0.17]} rotation={[1.85, 0, 0]}>
-          <RoundedBox args={[0.5, 0.018, 0.34]} radius={0.01} position={[0, 0, -0.17]}>
-            <meshStandardMaterial color={C.laptop} metalness={0.6} roughness={0.35} />
-          </RoundedBox>
-          <mesh position={[0, 0.011, -0.17]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[0.035, 24]} />
-            <meshBasicMaterial color={C.screen} toneMapped={false} />
-          </mesh>
-        </group>
+        <Laptop />
       </group>
 
       {/* floating shelf with a desktop PC, pushed along in the big-name section */}

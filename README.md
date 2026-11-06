@@ -99,7 +99,8 @@ Two huge sculpted hands in the spirit of Michelangelo's *Creation of Adam* (publ
 this site: dark old bronze with a green patina (a shader) and ivy wound round the forearms; both the same size
 (about three quarters of the screen height). The left hand rises in from the lower left, palm down; once the
 preloader lifts the character drops in from above, lands on its index finger, finds his feet and sits down
-there with the laptop. The right hand comes down from the top right and reaches towards him, its finger
+there facing right, eyes on his laptop (a "crystal diamond" laptop made in code, `scene/Laptop.tsx`: clear
+crystal with a rainbow sheen and sparkling facets, a lit code-editor screen and a backlit keyboard). The right hand comes down from the top right and reaches towards him, its finger
 turning a little towards the mouse. Model: the WebXR *generic hand* (`@webxr-input-profiles/assets`,
 MIT, © 2019 Amazon), posed joint by joint in code, with a forearm added so the arm runs off screen
 (`src/components/scene/HeroHands.tsx`).

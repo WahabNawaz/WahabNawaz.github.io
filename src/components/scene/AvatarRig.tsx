@@ -274,8 +274,13 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
       g.getWorldQuaternion(_q);
       _f.set(0, 0, 1).applyQuaternion(_q);
       const bodyYaw = Math.atan2(_f.x, _f.z);
-      const yaw = THREE.MathUtils.clamp((pointer.x - _ndc.x) * 0.8 - bodyYaw, -0.9, 0.9);
-      const pitch = THREE.MathUtils.clamp(-(pointer.y - _ndc.y) * 0.45, -0.35, 0.3);
+      const yawToMouse = THREE.MathUtils.clamp((pointer.x - _ndc.x) * 0.8 - bodyYaw, -0.9, 0.9);
+      const pitchToMouse = THREE.MathUtils.clamp(-(pointer.y - _ndc.y) * 0.45, -0.35, 0.3);
+      // at the laptop the eyes stay on its screen, with only a small glance
+      // towards the mouse
+      const atLaptop = want === "typing";
+      const yaw = atLaptop ? yawToMouse * 0.22 : yawToMouse;
+      const pitch = atLaptop ? 0.36 + pitchToMouse * 0.1 : pitchToMouse;
       L.yaw += (yaw - L.yaw) * k * 0.6;
       L.pitch += (pitch - L.pitch) * k * 0.6;
       lookTowards(sit.bones, g, L.yaw * L.w, L.pitch * L.w);

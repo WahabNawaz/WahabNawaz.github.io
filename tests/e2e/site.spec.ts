@@ -361,7 +361,9 @@ test.describe("site", () => {
     }
     const nf = await page.goto("/no-such-page/");
     expect(nf?.status()).toBe(404);
-    expect(errors.filter((e) => !/404|Failed to load resource/.test(e))).toEqual([]);
+    // leaving a page while its 3D textures are still decoding aborts them; that
+    // is the browser cancelling, not a site error
+    expect(errors.filter((e) => !/404|Failed to load resource|Couldn't load texture blob/.test(e))).toEqual([]);
   });
 });
 

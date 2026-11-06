@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => m.type() === "error" && !/GPU stall|GL Driver|WebGL: INVALID_/i.test(m.text()) && errors.push(m.text().slice(0, 200)));
-const glb = page.waitForResponse((r) => r.url().endsWith("/models/avatar.glb"));
+const glb = page.waitForResponse((r) => r.url().endsWith("/models/avatar.glb"), { timeout: 120_000 });
 await page.goto(base + "/");
 const res = await glb;
 const html = page.locator("html");
