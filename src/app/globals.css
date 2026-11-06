@@ -23,6 +23,13 @@ html {
   background: var(--paper);
 }
 
+/* never a sideways scrollbar (marquees and pinned sections stay inside);
+   clip, unlike hidden, keeps position: sticky working */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background: var(--paper);
   color: var(--ink);

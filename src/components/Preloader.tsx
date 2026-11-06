@@ -5,11 +5,12 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import { site } from "@/content/site";
 import { markIntroDone, onIntroDone } from "@/lib/intro";
 
-gsap.registerPlugin(useGSAP);
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const KEY = "intro-seen";
 
@@ -18,11 +19,15 @@ export default function Preloader() {
   const counter = useRef<HTMLSpanElement>(null);
   const lenis = useLenis();
 
-  // No scrolling until the curtain starts to lift.
+  // No scrolling until the curtain starts to lift. Stopping Lenis hides the
+  // scrollbar, so pinned sections are re-measured once it is back.
   useEffect(() => {
     if (!lenis) return;
     lenis.stop();
-    return onIntroDone(() => lenis.start());
+    return onIntroDone(() => {
+      lenis.start();
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    });
   }, [lenis]);
 
   useGSAP(
