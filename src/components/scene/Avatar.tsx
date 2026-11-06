@@ -13,7 +13,7 @@ import { avatar, type AnimState } from "@/content/avatar";
 import { animFor, poseFor } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
-import { PalmSeat } from "./HeroHands";
+import { heroSeat } from "./heroSeat";
 
 export type AnimRef = { current: AnimState };
 
@@ -208,11 +208,11 @@ function PlaceholderBody({ anim }: { anim: AnimRef }) {
  * Things the avatar uses: a giant open hand to sit in + laptop (hero, seated
  * typing) and a desk, monitor and chair (section "desk").
  */
-function SeatProps({ seat, place, yaw }: { seat: { current: Seat }; place: { current: string }; yaw: { current: number } }) {
-  const palm = useRef<THREE.Group>(null);
-  const rise = useRef(0);
+function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current: string } }) {
   const laptop = useRef<THREE.Group>(null);
   const desk = useRef<THREE.Group>(null);
+  const shelf = useRef<THREE.Group>(null);
+  const screen = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame((_, dt) => {
     const { w, hipY, hipZ, kneeY, kneeZ } = seat.current;
@@ -225,26 +225,16 @@ function SeatProps({ seat, place, yaw }: { seat: { current: Seat }; place: { cur
     };
     const onRock = place.current === "rock" && w > 0.5;
     const atDesk = place.current === "desk" && w > 0.5;
-    // the hand rises up from below as the character sits down
-    rise.current += ((onRock ? 1 : 0) - rise.current) * (1 - Math.exp(-dt * (onRock ? 2.2 : 5)));
-    const r = rise.current;
-    if (palm.current) {
-      palm.current.position.set(0.3, hipY - 0.24 - (1 - r) * 2.2, hipZ - 0.42);
-      palm.current.scale.setScalar(Math.max(0.0001, 0.75 + 0.25 * r));
-      palm.current.visible = r > 0.01;
-    }
     if (laptop.current) laptop.current.position.set(0, (hipY + kneeY) / 2 + 0.1, (hipZ + kneeZ) / 2 + 0.14);
     if (desk.current) desk.current.position.set(0, hipY, hipZ);
     show(laptop.current, onRock);
     show(desk.current, atDesk);
+    show(shelf.current, place.current === "shelf");
+    if (screen.current) screen.current.emissiveIntensity = 1.3 + Math.sin(performance.now() / 400) * 0.2;
   });
 
   return (
     <>
-      {/* giant open hand to sit in (HeroHands.tsx) */}
-      <group ref={palm} visible={false}>
-        <PalmSeat yaw={yaw} />
-      </group>
 
       {/* laptop on the lap, lid towards the character */}
       <group ref={laptop} scale={0.0001}>
@@ -260,6 +250,42 @@ function SeatProps({ seat, place, yaw }: { seat: { current: Seat }; place: { cur
             <meshBasicMaterial color={C.screen} toneMapped={false} />
           </mesh>
         </group>
+      </group>
+
+      {/* floating shelf with a desktop PC, pushed along in the big-name section */}
+      <group ref={shelf} scale={0.0001} position={[0, 0.12, 1.25]}>
+        {/* the plank, light wood, lying along the way the character faces */}
+        <RoundedBox args={[0.9, 0.07, 1.9]} radius={0.02}>
+          <meshStandardMaterial color="#dcc7a4" roughness={0.65} />
+        </RoundedBox>
+        {/* monitor */}
+        <group position={[0.05, 0.42, 0.25]} rotation={[0, -Math.PI / 2, 0]}>
+          <RoundedBox args={[0.74, 0.46, 0.04]} radius={0.015}>
+            <meshStandardMaterial color="#141418" roughness={0.4} />
+          </RoundedBox>
+          <mesh position={[0, 0, 0.022]}>
+            <planeGeometry args={[0.68, 0.4]} />
+            <meshStandardMaterial ref={screen} color="#1a0b2e" emissive="#b84dff" emissiveIntensity={1.3} />
+          </mesh>
+          <mesh position={[0, -0.3, -0.04]}>
+            <boxGeometry args={[0.05, 0.16, 0.05]} />
+            <meshStandardMaterial color="#141418" />
+          </mesh>
+        </group>
+        {/* PC tower with a lit side */}
+        <group position={[0.05, 0.3, 0.75]}>
+          <RoundedBox args={[0.24, 0.5, 0.46]} radius={0.015}>
+            <meshStandardMaterial color="#111114" roughness={0.35} metalness={0.3} />
+          </RoundedBox>
+          <mesh position={[-0.122, 0.02, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[0.38, 0.4]} />
+            <meshStandardMaterial color="#09090c" emissive="#ff3d7f" emissiveIntensity={0.9} transparent opacity={0.85} />
+          </mesh>
+        </group>
+        {/* keyboard */}
+        <RoundedBox args={[0.18, 0.02, 0.5]} radius={0.006} position={[-0.18, 0.045, 0.2]}>
+          <meshStandardMaterial color="#e9e9ee" />
+        </RoundedBox>
       </group>
 
       {/* desk, monitor and chair */}
@@ -312,12 +338,12 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
-  // Opening: on the home page the character walks in from the right once the
-  // preloader lifts, then sits down in the big open hand. "wait" = still off screen.
+  // Opening: on the home page the character walks in from the left once the
+  // preloader lifts (along the big bronze arm), then sits down on the hand.
+  // "wait" = still off screen.
   const entrance = useRef<"wait" | "walk" | "done">("done");
   const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
   const place = useRef<string>("");
-  const yaw = useRef(0); // the character's current turn, for props that should not turn with it
 
   useFrame((state, dt) => {
     const g = root.current;
@@ -329,7 +355,26 @@ export default function Avatar({ pathname }: { pathname: string }) {
     anim.current = animFor(pathname, section, footer, dance);
     // which seat props to show: the open hand ("rock" spot) in the hero, desk in the "desk" section
     const path = pathname.replace(/\/$/, "") || "/";
-    place.current = footer ? "" : section === "hero" || (path === "/" && !section) ? "rock" : section === "desk" ? "desk" : "";
+    place.current = footer
+      ? ""
+      : section === "hero" || (path === "/" && !section)
+        ? "rock"
+        : section === "desk"
+          ? "desk"
+          : section === "name"
+            ? "shelf"
+            : "";
+
+    // the big hand in the hero is placed from the hero spot, not from where the
+    // character is right now
+    const heroPose = poseFor(pathname, "hero", mobile, false);
+    heroSeat.active = path === "/" && !footer && (section === "hero" || !section);
+    heroSeat.x = (heroPose.x * viewport.width) / 2;
+    heroSeat.y = (heroPose.y * viewport.height) / 2;
+    heroSeat.s = (heroPose.s * viewport.height) / 5;
+    heroSeat.ry = heroPose.ry;
+    heroSeat.hipY = seat.current.hipY;
+    heroSeat.hipZ = seat.current.hipZ;
 
     // ease towards the target pose (also animates page-to-page moves)
     const k = 1 - Math.exp(-dt * 3.2);
@@ -343,8 +388,8 @@ export default function Avatar({ pathname }: { pathname: string }) {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (path === "/" && section !== "desk" && !footer && !reduce) {
         entrance.current = "wait";
-        g.position.set(viewport.width / 2 + ts * 0.8, ty, 0);
-        g.rotation.y = -Math.PI / 2;
+        g.position.set(-viewport.width / 2 - ts * 0.8, ty, 0);
+        g.rotation.y = Math.PI / 2;
         g.scale.setScalar(ts);
       } else {
         g.position.set(tx, ty, 0);
@@ -386,7 +431,6 @@ export default function Avatar({ pathname }: { pathname: string }) {
     g.position.y += (ty - g.position.y) * k;
     g.rotation.y += (facing - g.rotation.y) * k * 1.5;
     g.scale.setScalar(g.scale.x + (ts - g.scale.x) * k);
-    yaw.current = g.rotation.y;
     if (hop.current) {
       const lift = travelling ? Math.min(dist / Math.max(g.scale.x, 0.001), 4) * 0.22 : 0;
       hop.current.position.y += (lift - hop.current.position.y) * (1 - Math.exp(-dt * 6));
@@ -409,7 +453,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
               />
             </Suspense>
             <Suspense fallback={null}>
-              <SeatProps seat={seat} place={place} yaw={yaw} />
+              <SeatProps seat={seat} place={place} />
             </Suspense>
           </>
         ) : (

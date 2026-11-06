@@ -47,9 +47,22 @@ function report(name: "avatar" | "avatarLook" | "avatarBlinks", value: string) {
   if (d[name] !== value) d[name] = value;
 }
 
-/** Put bones back to their rest pose; the clips then set the ones they drive. */
-function restBones(binds: Map<THREE.Bone, THREE.Quaternion>) {
-  binds.forEach((q, b) => b.quaternion.copy(q));
+/**
+ * Undo last frame's code-made bends before the clips run. Bones the current clip
+ * drives go back to what the clip gave them last frame (three.js only writes a
+ * bone when its value changes, so a still pose, like sitting, would otherwise
+ * stay wherever the bends left it); the others go back to the rest pose.
+ */
+function restBones(binds: Map<THREE.Bone, THREE.Quaternion>, animated: Set<string>, last: Map<THREE.Bone, THREE.Quaternion>) {
+  binds.forEach((q, b) => b.quaternion.copy((animated.has(b.name) && last.get(b)) || q));
+}
+/** Remember what the clips gave these bones this frame. */
+function keepClipPose(binds: Map<THREE.Bone, THREE.Quaternion>, last: Map<THREE.Bone, THREE.Quaternion>) {
+  binds.forEach((_, b) => {
+    const q = last.get(b);
+    if (q) q.copy(b.quaternion);
+    else last.set(b, b.quaternion.clone());
+  });
 }
 
 function switchClip(actions: Record<string, THREE.AnimationAction | null>, from: string | null, to: string) {
@@ -170,6 +183,7 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
     return { bones, binds: bindQuats(bones) };
   }, [scene]);
   const face = useMemo(() => findFace(scene), [scene]);
+  const clipPose = useRef(new Map<THREE.Bone, THREE.Quaternion>());
   const nextBlink = useRef(1.5);
   const blinks = useRef(0);
   const jawW = useRef(0);
@@ -221,8 +235,9 @@ export default function AvatarRig({ anim, onSeat }: { anim: AnimRef; onSeat: (se
     }
     // rest pose first, so the code-made bends below never pile up on bones
     // the current clip does not drive; then the clips pose the skeleton
-    restBones(sit.binds);
+    restBones(sit.binds, animatedBy.get(want) ?? new Set(), clipPose.current);
     tickMix(mix, dt);
+    keepClipPose(sit.binds, clipPose.current);
 
     const k = 1 - Math.exp(-dt * 6);
     const g = group.current;

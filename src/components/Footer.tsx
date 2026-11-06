@@ -10,7 +10,6 @@ import { useGSAP } from "@gsap/react";
 import { nav, site } from "@/content/site";
 import { sceneStore } from "@/lib/scene-store";
 import RollText from "./RollText";
-import { useSky } from "@/lib/scene-store";
 
 const Sky = dynamic(() => import("./scene/Sky"), { ssr: false });
 
@@ -34,7 +33,6 @@ function LocalTime() {
 
 export default function Footer() {
   const lenis = useLenis();
-  const night = useSky() === "night";
   const ref = useRef<HTMLElement>(null);
 
   // Tell the 3D character when the footer is on screen (it moves aside).
@@ -52,9 +50,10 @@ export default function Footer() {
   return (
     <footer
       ref={ref}
-      className={`relative isolate z-10 overflow-hidden px-5 pb-8 pt-24 transition-colors duration-700 md:px-8 ${night ? "text-paper" : "text-ink"}`}
+      className="relative isolate z-10 overflow-hidden px-5 pb-8 pt-24 text-paper md:px-8"
     >
-      <Sky className="absolute inset-0 -z-10 bg-[#cfe0f0]" />
+      {/* always a warm sunset down here, whatever the hero's sky is set to */}
+      <Sky mode="sunset" className="absolute inset-0 -z-10 bg-[#6a5a86]" />
       <p className="font-mono text-xs uppercase tracking-widest opacity-60">Lorem ipsum?</p>
       <h2 className="mt-4 max-w-4xl font-display text-5xl font-semibold leading-[0.95] tracking-tight md:text-8xl">
         Got something worth building?

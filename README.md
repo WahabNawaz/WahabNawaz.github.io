@@ -93,12 +93,20 @@ Clip names and which animation plays where:
   (hero = sits in the big hand with a laptop, big name = jogs, footer/contact = waves, Playground = dances).
 - `AvatarRig.tsx` also blinks every few seconds, smiles a little and moves the jaw while talking.
 
-### Hero hands
+### Hero hands and the opening
 
-Two large sculpted hands, built in 3D (no photos): an open left hand the character sits in (it rises as he
-sits down) and a right hand that reaches in from the right, points at him and turns its finger towards the
-mouse. Model: the WebXR *generic hand* (`@webxr-input-profiles/assets`, MIT, © 2019 Amazon), posed joint by
-joint in code, with a forearm added so the arm runs off screen.
+Two huge sculpted hands in the spirit of Michelangelo's *Creation of Adam* (public domain), built in 3D for
+this site: dark old bronze with a green patina (a shader) and ivy wound round the forearms. The left hand comes
+in from the lower left, palm down; the character walks in from the left once the preloader lifts and sits
+down on its knuckles with the laptop. The right hand comes down from the top right and reaches towards him,
+its finger turning a little towards the mouse. Model: the WebXR *generic hand* (`@webxr-input-profiles/assets`,
+MIT, © 2019 Amazon), posed joint by joint in code, with a forearm added so the arm runs off screen
+(`src/components/scene/HeroHands.tsx`).
+
+Home sequence: soft cloud sky (`scene/Sky.tsx`) → big name, the character pushing a floating desk with a PC
+across the sky → the statement under northern lights → the next section comes up over the sky like a page
+with its corner folded over (`home/Pitch.tsx`) → role → service band → work → clients → services (sticky
+heading, illustrations) → process → footer at sunset.
 
 ## Service illustrations
 

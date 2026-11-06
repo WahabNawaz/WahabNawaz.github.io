@@ -10,7 +10,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
 import { isIntroDone } from "@/lib/intro";
 import Avatar from "./Avatar";
-import { PointingHand } from "./HeroHands";
+import { ReachingHand, SeatHand } from "./HeroHands";
 import { pointer, trackPointer } from "./pointer";
 
 const LIGHT: Record<SkyMode, { key: string; fill: string; keyI: number; ambI: number }> = {
@@ -150,7 +150,8 @@ export default function Scene({ pathname }: { pathname: string }) {
       <Avatar pathname={pathname} />
       {/* only shows while the home hero is in view */}
       <Suspense fallback={null}>
-        <PointingHand />
+        <SeatHand />
+        <ReachingHand />
       </Suspense>
       {/* decorative floating shapes are off now that the hero has the hands;
           put <Shapes /> back here to show them on the home hero */}

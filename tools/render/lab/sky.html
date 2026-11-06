@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>sky</title>
+<style>html,body{margin:0;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script>
+</head>
+<body>
+<script type="module">
+// Renders the site's sky shader (read straight from Sky.tsx) with a palette
+// from the URL, for quick tuning: ?mode=day|sunset|night|aurora&t=12
+import * as THREE from "three";
+const q = new URLSearchParams(location.search);
+const src = await (await fetch("/src/components/scene/Sky.tsx")).text();
+const grab = (name) => src.match(new RegExp(`const ${name} = /\\* glsl \\*/ \`([\\s\\S]*?)\`;`))[1];
+const parsePal = (name) => {
+  const m = src.match(new RegExp(`${name}: \\{([\\s\\S]*?)\\n  \\},`)) || src.match(new RegExp(`const ${name}: Palette = \\{([\\s\\S]*?)\\n\\};`));
+  const body = m[1];
+  const get = (k) => { const r = body.match(new RegExp(`${k}: ([^,\\n]+(?:, [0-9.]+\\])?)`)); return r ? r[1].trim() : null; };
+  return {
+    top: eval(get("top")), bottom: eval(get("bottom")), glow: eval(get("glow")), shade: eval(get("shade")), bright: eval(get("bright")),
+    glowPos: eval(get("glowPos")), glowSize: +get("glowSize"), mist: +get("mist"), contrast: +get("contrast"), sat: +get("sat"),
+    stars: +get("stars"), clouds: +get("clouds"), cover: +get("cover"), aurora: +get("aurora"),
+  };
+};
+const mode = q.get("mode") || "day";
+const p = mode === "aurora" ? parsePal("AURORA") : parsePal(mode);
+for (const k of ["cover", "clouds", "mist", "glowSize"]) if (q.has(k)) p[k] = +q.get(k);
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+document.body.appendChild(renderer.domElement);
+const u = {
+  uTop: { value: new THREE.Color(p.top) }, uBottom: { value: new THREE.Color(p.bottom) }, uGlow: { value: new THREE.Color(p.glow) },
+  uShade: { value: new THREE.Color(p.shade) }, uBright: { value: new THREE.Color(p.bright) }, uAurora: { value: p.aurora },
+  uGlowPos: { value: new THREE.Vector2(...p.glowPos) }, uGlowSize: { value: p.glowSize }, uMist: { value: p.mist }, uContrast: { value: p.contrast },
+  uSat: { value: p.sat }, uStars: { value: p.stars }, uClouds: { value: p.clouds }, uCover: { value: p.cover },
+  uTime: { value: Number(q.get("t") || 12) }, uRes: { value: new THREE.Vector2(W, H) }, uPointer: { value: new THREE.Vector2() },
+};
+const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: grab("vertexShader"), fragmentShader: grab("fragmentShader"), uniforms: u, depthTest: false }));
+const scene = new THREE.Scene(); scene.add(mesh);
+renderer.render(scene, new THREE.Camera());
+document.title = JSON.stringify({ mode, cover: p.cover });
+window.done = true;
+</script>
+</body>
+</html>

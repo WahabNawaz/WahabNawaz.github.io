@@ -15,15 +15,17 @@ export type Pose = { x: number; y: number; ry: number; s: number };
 
 export const NAMED: Record<string, Pose> = {
   // sitting on the floating rock, centre-left, under the centred headline
-  hero: { x: -0.3, y: -0.34, ry: 0.42, s: 1.25 },
+  hero: { x: -0.28, y: -0.16, ry: -0.8, s: 1.15 },
   // seated at the desk (pitch section)
   desk: { x: -0.66, y: -0.28, ry: 1.2, s: 0.85 },
   left: { x: -0.66, y: -0.3, ry: 0.65, s: 0.72 },
   right: { x: 0.66, y: -0.3, ry: -0.65, s: 0.72 },
   "right-high": { x: 0.68, y: 0.15, ry: -0.7, s: 0.6 },
   center: { x: 0.0, y: -0.45, ry: 0.0, s: 0.9 },
-  // standing in front of the big sliding name
-  name: { x: 0.3, y: -0.42, ry: -0.35, s: 0.8 },
+  // pushing a floating shelf with a PC across the sky, in front of the big name
+  name: { x: -0.42, y: -0.28, ry: 1.2, s: 0.78 },
+  // the night-sky statement: off to the right, small
+  statement: { x: 0.72, y: -0.5, ry: -0.6, s: 0.55 },
   // standing up on the big role title
   role: { x: 0.12, y: 0.05, ry: -0.25, s: 0.62 },
   // services page: in the middle of the orbiting tool logos
@@ -71,7 +73,8 @@ export function poseFor(pathname: string, section: string | null, mobile: boolea
 const SECTION_ANIM: Record<string, AnimState> = {
   hero: "typing",
   desk: "typing",
-  name: "run",
+  name: "push",
+  statement: "idle",
   role: "wave",
   orbit: "idle",
 };
