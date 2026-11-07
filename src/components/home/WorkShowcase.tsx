@@ -4,7 +4,7 @@
 // page and opens onto a huge, centred WORK title (pinned while the 3D
 // character dives over it, see poses.ts), then the projects follow inside
 // device frames (monitor / laptop, drawn with CSS) with a one-line pitch above.
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -45,16 +45,19 @@ export default function WorkShowcase() {
 
   useGSAP(
     () => {
+      // the circle's radius follows the scroll (--r); its centre (--cx, --cy)
+      // and a second radius that opens it by itself (--rb) are set by the
+      // role title's bouncing full stop when it lands (home/full-stop.ts)
       const circle = "[data-work-circle]";
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        gsap.set(circle, { clipPath: "circle(150% at 56% 62%)" });
+        gsap.set(circle, { "--r": "150%" });
         return;
       }
       gsap.fromTo(
         circle,
-        { clipPath: "circle(0% at 56% 62%)" },
+        { "--r": "0%" },
         {
-          clipPath: "circle(150% at 56% 62%)",
+          "--r": "150%",
           ease: "power1.in",
           scrollTrigger: { trigger: "[data-work-intro]", start: "top 85%", end: "top -15%", scrub: 0.3 },
         },
@@ -73,7 +76,7 @@ export default function WorkShowcase() {
     <section ref={root} data-pose="work" className="relative text-paper">
       <div data-work-intro className="relative h-[170svh]">
         <div className="sticky top-0 h-svh overflow-hidden">
-          <div data-work-circle className="absolute inset-0 flex flex-col bg-ink px-5 pb-12 pt-[18svh] md:px-8" style={{ clipPath: "circle(0% at 56% 62%)" }}>
+          <div data-work-circle className="absolute inset-0 flex flex-col bg-ink px-5 pb-12 pt-[18svh] md:px-8" style={{ "--r": "0%", "--rb": "0px", "--cx": "56%", "--cy": "62%", clipPath: "circle(max(var(--r), var(--rb)) at var(--cx) var(--cy))" } as CSSProperties}>
             <h2 data-work-title className="relative mx-auto font-display text-[30vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[19vw]">
               Work
               <sup className="absolute -right-[0.9em] top-[0.2em] font-mono text-[11px] font-normal normal-case tracking-widest text-paper/70 md:text-sm">’25–26</sup>

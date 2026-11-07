@@ -39,8 +39,9 @@ export const NAMED: Record<string, Pose> = {
   brand: { x: -0.72, y: 2.2, ry: 0.4, s: 1.2 },
   process: { x: 0.7, y: -2.8, ry: -0.25, s: 1.24 },
   clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
-  // standing in the middle of the big role title, on its own shadow
-  role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
+  // big, in front of the middle of the role title (the real spot and the
+  // jumps in and out come from rolePose below)
+  role: { x: -0.02, y: -0.1, ry: 0.12, s: 1.9 },
   // services page: in the middle of the orbiting tool logos
   orbit: { x: 0.45, y: -0.32, ry: -0.2, s: 0.62 },
 };
@@ -124,7 +125,6 @@ export function animFor(
  * entering at the bottom .. leaving at the top; "work" uses its pinned intro),
  * like the reference:
  * - name: walks off left, pushes the floating desk across, jumps off;
- * - band: dives off the role title down past the band;
  * - work: out of sight while the black circle opens, then dives over the
  *   pinned WORK title from left to right and is gone again for the projects;
  * (clients, services, showcase, process and footer: see edgePose, risePose,
@@ -146,10 +146,6 @@ export function scrollPose(section: string | null, p: number): ScrollPose | null
     }
     const k = (c - 0.86) / 0.14;
     return { x: 0.38 + k * 0.9, y: -0.3 - k * k * 1.2, ry: 1.0, s: 0.78, roll: -k * 0.6, anim: "jump" };
-  }
-  if (section === "band") {
-    // head first, down to the right, out of the bottom of the screen
-    return { x: 0.02 + c * 0.6, y: 0.1 - c * 1.7, ry: 1.25, s: 0.66, roll: -0.3 - c * 1.0, anim: "jump" };
   }
   if (section === "work") {
     if (c < 0.42) return { x: -1.6, y: 0.3, ry: 1.25, s: 1.0, roll: -1.25, anim: "jump", hide: true };
@@ -220,6 +216,45 @@ const TORSO = 0.18;
 // The footer character: right side, facing the visitor, a little turned
 // towards the footer text; about half the screen tall (like the reference).
 const FOOT = { x: 0.7, ry: -0.25, s: 1.24 };
+
+/**
+ * Role, like the reference (state from lib/role-trip.ts, measured by
+ * RoleSection.tsx): he jumps over from the desk (`trip` 0 -> 1, from about
+ * halfway; before that the desk section still has him) and lands big in front
+ * of the title, his feet near the bottom of the screen; he moves up with the
+ * section once it is no longer pinned (`shift`, screen heights). Then
+ * (`out` 0 -> 1) he leaps up and drops down through the band, out of sight.
+ * On phones he comes in from his corner and stands a little smaller.
+ */
+export function rolePose(trip: number, out: number, shift: number, mobile: boolean): ScrollPose {
+  const stand = mobile ? { x: 0, soles: 0.95, s: 1.45, ry: 0.1 } : { x: -0.02, soles: 0.95, s: 1.9, ry: 0.12 };
+  const from = mobile ? { x: 0.62, soles: 0.95, s: 0.3, ry: -0.5 } : { x: -0.36, soles: 0.62, s: 1.15, ry: 0.8 };
+  const at = (x: number, soles: number, s: number, ry: number, roll: number, anim: AnimState): ScrollPose => {
+    const hips = soles - LEGS * s;
+    return { x, y: yAt(hips), ry, s, roll, anim, hide: hips - TORSO * s > 1.02 };
+  };
+  const base = stand.soles + shift;
+  if (out > 0.001) {
+    // up (leaning into the leap, highest at a quarter), then quickly down
+    // past the bottom of the screen
+    const o = Math.min(1, out);
+    const lean = Math.sin(Math.PI * Math.min(1, o / 0.5));
+    const lift = o < 0.25 ? -0.15 * Math.sin((Math.PI / 2) * (o / 0.25)) : -0.15 + 10 * (o - 0.25) ** 2;
+    return at(stand.x + 0.06 * lean, base + lift, stand.s, stand.ry - 0.25 * lean, -0.55 * lean, "jump");
+  }
+  const t = Math.min(1, Math.max(0, (trip - 0.45) / 0.55));
+  if (t >= 1) return at(stand.x, base, stand.s, stand.ry, 0, "idle");
+  const e = smooth(t);
+  const arc = Math.sin(Math.PI * t);
+  return at(
+    mix(from.x, stand.x, e),
+    mix(from.soles, base, e) - arc * (mobile ? 0.15 : 0.2),
+    mix(from.s, stand.s, e),
+    mix(from.ry, stand.ry, e),
+    -0.2 * arc,
+    t > 0.96 ? "idle" : "jump",
+  );
+}
 
 /**
  * Process, like the reference: at step 03 he jumps up from the bottom of the

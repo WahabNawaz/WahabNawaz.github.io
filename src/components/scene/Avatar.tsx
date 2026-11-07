@@ -10,7 +10,8 @@ import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
 import { isHeroReady, isIntroDone, markHeroReady } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
-import { animFor, edgePose, footerAnim, footerPose, poseFor, processPose, risePose, scrollPose, type ScrollPose } from "./poses";
+import { animFor, edgePose, footerAnim, footerPose, poseFor, processPose, risePose, rolePose, scrollPose, type ScrollPose } from "./poses";
+import { roleTrip } from "@/lib/role-trip";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
@@ -397,9 +398,14 @@ export default function Avatar({ pathname }: { pathname: string }) {
         ty = (scrubbed.y * viewport.height) / 2;
       }
     }
-    if (!mobile && !footer && path === "/" && (section === "work" || section === "band")) {
-      // work: the pinned intro (circle + title) sets the pace, not the whole section
-      const el = document.querySelector<HTMLElement>(section === "work" ? "[data-work-intro]" : `[data-pose="${section}"]`);
+    // role -> band: he jumps over from the desk, stands big in front of the
+    // role title and leaps down into the band, gone (phones too)
+    if (!footer && path === "/" && (section === "role" || section === "band")) {
+      scrubbed = rolePose(roleTrip.p, roleTrip.out, roleTrip.shift, mobile);
+    }
+    if (!mobile && !footer && path === "/" && section === "work") {
+      // the pinned intro (circle + title) sets the pace, not the whole section
+      const el = document.querySelector<HTMLElement>("[data-work-intro]");
       if (el) {
         const r = el.getBoundingClientRect();
         scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight));
@@ -572,8 +578,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
       dist > viewport.height * 0.06 &&
       !(dance.active && path === "/playground") &&
       !(onFinger && Math.abs(dx) < viewport.width * 0.04);
-    // (into the role section he just stands up from the desk and walks over)
-    if (travelling) anim.current = section === "role" ? "walk" : Math.abs(dy) > Math.abs(dx) * 0.9 ? "jump" : "run";
+    if (travelling) anim.current = Math.abs(dy) > Math.abs(dx) * 0.9 ? "jump" : "run";
     if (scrubbed?.anim) anim.current = scrubbed.anim;
     const ry = scrubbed ? scrubbed.ry : pose.ry;
     const facing = travelling && Math.abs(dx) > viewport.width * 0.05 ? Math.sign(dx) * 1.3 : ry + pointer.x * 0.15;
@@ -592,7 +597,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     }
     // a soft contact shadow under his feet where he stands on the page
     if (shadow.current) {
-      const want = section === "role" && !travelling && !footer ? 0.42 : 0;
+      const want = section === "role" && !footer && roleTrip.p > 0.98 && roleTrip.out < 0.02 ? 0.42 : 0;
       const o = shadow.current.material as THREE.MeshBasicMaterial;
       o.opacity += (want - o.opacity) * (1 - Math.exp(-dt * 5));
       shadow.current.visible = o.opacity > 0.01;

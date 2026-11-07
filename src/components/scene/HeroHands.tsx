@@ -349,6 +349,9 @@ export function SeatHand() {
       if (heroSeat.active && !reduce) opening.k = -0.0001 - 0.15 / FLY;
       else opening.done = true;
     }
+    // scrolled away from the hero while they are still flying in: skip the
+    // rest, so they go with the hero instead of hanging over the next sections
+    if (!opening.done && opening.k > -1 && isIntroDone() && !heroSeat.active) opening.done = true;
     if (!opening.done && isIntroDone() && opening.k > -1) {
       opening.k += Math.min(dt, 1 / 30) / FLY;
       if (opening.k >= 1) opening.done = true;

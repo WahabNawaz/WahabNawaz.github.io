@@ -74,7 +74,7 @@ export default function ServiceBand() {
       ref={root}
       aria-label="Services"
       data-pose="band"
-      className="relative z-10 -my-24 overflow-hidden bg-[#dde4c3] pb-44 pt-48 text-ink md:min-h-[72svh] md:pb-0 md:pt-[27svh]"
+      className="relative z-10 -mb-24 overflow-hidden bg-[#dde4c3] pb-44 pt-48 text-ink md:min-h-[72svh] md:pb-0 md:pt-[27svh]"
       style={{ "--x": 20, "--xb": 64, clipPath: EDGES } as CSSProperties}
     >
       <div className="absolute right-5 top-[17%] flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest md:right-8">
@@ -112,7 +112,7 @@ export default function ServiceBand() {
       </Marquee>
 
       {/* the dial: tick marks on an arc, numbered every five */}
-      <div aria-hidden className="pointer-events-none absolute bottom-[-2%] left-1/2 hidden -translate-x-1/2 md:block">
+      <div data-band-dial aria-hidden className="pointer-events-none absolute bottom-[-2%] left-1/2 hidden -translate-x-1/2 md:block">
         <svg data-dial viewBox="-110 -110 220 220" className="size-56 text-ink">
           {Array.from({ length: 21 }, (_, i) => {
             const a = ((-150 + i * 6) * Math.PI) / 180;
