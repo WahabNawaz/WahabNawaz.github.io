@@ -4,11 +4,11 @@
 // re-created on page changes: the character walks from page to page.
 import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float } from "@react-three/drei";
+import { Float, useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
-import { isIntroDone } from "@/lib/intro";
+import { loadState } from "@/lib/load-progress";
 import Avatar from "./Avatar";
 import { ReachingHand, SeatHand } from "./HeroHands";
 import { pointer, trackPointer } from "./pointer";
@@ -69,25 +69,15 @@ function Lights() {
 }
 
 /**
- * Opening camera move: starts low and further back, rises and settles once
- * the preloader lifts. After that it drifts a little with the mouse.
+ * The camera drifts a little with the mouse. (The opening move is the hands
+ * flying in, HeroHands.tsx, so the camera itself stays put.)
  */
 function CameraRig() {
-  const intro = useRef(-1); // 1 = start of the move, 0 = settled, -1 = not set up yet
   useFrame(({ camera }, dt) => {
-    if (intro.current < 0) {
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      intro.current = reduce ? 0 : 1;
-      camera.position.set(0, -1.6 * intro.current, 10 + 2.5 * intro.current);
-    }
-    if (isIntroDone()) intro.current += (0 - intro.current) * (1 - Math.exp(-dt * 1.6));
-    const i = intro.current;
     const k = 1 - Math.exp(-dt * 4);
-    const tx = pointer.x * 0.18;
-    const ty = -1.6 * i + pointer.y * 0.1;
-    camera.position.x += (tx - camera.position.x) * k;
-    camera.position.y = i > 0.01 ? ty : camera.position.y + (ty - camera.position.y) * k;
-    camera.position.z = 10 + 2.5 * i;
+    camera.position.x += (pointer.x * 0.18 - camera.position.x) * k;
+    camera.position.y += (pointer.y * 0.1 - camera.position.y) * k;
+    camera.position.z = 10;
     camera.lookAt(0, 0, 0);
   });
   return null;
@@ -133,7 +123,15 @@ export default function Scene({ pathname }: { pathname: string }) {
   useEffect(() => {
     trackPointer();
     sceneStore.loadSky();
+    loadState.scene = performance.now();
   }, []);
+  // report file loading to the preloader (lib/load-progress.ts)
+  const { active, progress, total } = useProgress();
+  useEffect(() => {
+    loadState.active = active;
+    loadState.progress = progress;
+    if (total > 0) loadState.started = true;
+  }, [active, progress, total]);
 
   return (
     <Canvas

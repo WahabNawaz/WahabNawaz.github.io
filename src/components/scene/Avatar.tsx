@@ -8,7 +8,7 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
-import { isIntroDone } from "@/lib/intro";
+import { isHeroReady, isIntroDone, markHeroReady } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
 import { animFor, edgePose, footerAnim, footerPose, poseFor, processPose, risePose, scrollPose, type ScrollPose } from "./poses";
 import { pointer } from "./pointer";
@@ -243,27 +243,31 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
       </group>
 
       {/* floating shelf with a developer's setup, pushed along in the big-name
-          section; the screens and the PC's glass side face the camera (-X) */}
+          section, like the reference: he pushes the bare near end, the setup
+          stands on the middle and far part of the slab. The screens and the
+          PC's glass side face the camera (-X). Positions below are from his
+          body along the slab (the slab runs from 0.3 to 2.2) */}
       <group ref={shelf} scale={0.0001} position={[0, 0.12, 1.25]}>
-        <RoundedBox args={[0.9, 0.07, 1.9]} radius={0.02}>
+        <RoundedBox args={[0.9, 0.09, 1.9]} radius={0.025}>
           <meshStandardMaterial color="#dcc7a4" roughness={0.65} />
         </RoundedBox>
-        <group position={[0, 0.035, 0]}>
-          <group position={[0.12, 0, 0.82]} rotation={[0, -Math.PI / 2, 0]}>
-            <Monitor kind="editor" />
-          </group>
-          <group position={[0.14, 0, 1.36]} rotation={[0, -Math.PI / 2 + 0.25, 0]}>
-            <Monitor kind="terminal" w={0.26} h={0.42} stand={0.2} />
-          </group>
-          <group position={[0.16, 0, 1.72]}>
-            <PcTower />
-          </group>
-          <group position={[-0.2, 0, 0.86]} rotation={[0, -Math.PI / 2, 0]}>
+        <group position={[0, 0.045, -1.25]}>
+          <group position={[-0.2, 0, 0.92]} rotation={[0, -Math.PI / 2, 0]}>
             <DeskBits />
             <Keyboard />
           </group>
-          <group position={[0.26, 0, 0.38]} rotation={[0, -Math.PI / 2, 0]}>
-            <Router />
+          <group position={[0.12, 0, 1.0]} rotation={[0, -Math.PI / 2, 0]}>
+            <Monitor kind="editor" />
+          </group>
+          <group position={[0.14, 0, 1.5]} rotation={[0, -Math.PI / 2 + 0.25, 0]}>
+            <Monitor kind="terminal" w={0.26} h={0.42} stand={0.2} />
+          </group>
+          <group position={[0.1, 0, 1.86]}>
+            <PcTower />
+            {/* the router sits on the PC, antennas up */}
+            <group position={[0, 0.48, 0]} rotation={[0, -Math.PI / 2, 0]}>
+              <Router />
+            </group>
           </group>
         </group>
       </group>
@@ -310,6 +314,11 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
   );
 }
 
+// Opening drop: how much bigger than seated he is, and how close to the camera
+// (world units; the camera is at z = 10)
+const BIG = 1.6;
+const NEAR = 2.2;
+
 // How far in front of the finger's centre line he sits on the hero hand, in
 // character sizes (0 = on the centre line: his right shin went through the
 // finger, which points right and towards the camera).
@@ -321,12 +330,15 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
   const dangle = useRef(0);
+  const readyTimer = useRef(0);
   const footSince = useRef(-1); // when the footer came on screen (clock seconds), -1 = not on
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
-  // Opening: on the home page, once the preloader lifts and the big bronze hand
-  // has risen, the character drops in from above, lands on its index finger,
-  // finds his feet and sits down there. "wait" = still above the screen.
-  const entrance = useRef<"wait" | "drop" | "land" | "done">("done");
+  // Opening, like the reference: on the home page, once the hands have flown
+  // in, the character drops in from above close to the camera (big), lands in
+  // the middle of the sky, then hops back onto the seat hand's index finger
+  // (getting smaller as he goes further away) and sits down there.
+  // "wait" = still above the screen.
+  const entrance = useRef<"wait" | "drop" | "land" | "back" | "done">("done");
   const phase = useRef({ t: 0, from: 0 });
   const seated = useRef(0); // eased like the sit-down clip, for the seat height
   const ready = useRef(!avatar.enabled); // the GLB avatar has loaded and drawn
@@ -448,15 +460,19 @@ export default function Avatar({ pathname }: { pathname: string }) {
     if (!placed.current) {
       placed.current = true;
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (path === "/" && section !== "desk" && !footer && !reduce) {
+      if (path === "/" && (section === "hero" || !section) && !footer && !reduce) {
         entrance.current = "wait";
-        g.position.set(tx, viewport.height / 2 + ts * 2.6, tz);
+        g.position.set(0, viewport.height + ts * 6, NEAR);
         g.rotation.y = 0;
-        g.scale.setScalar(ts);
+        g.scale.setScalar(ts * BIG);
       } else {
         g.position.set(tx, ty, tz);
         g.rotation.y = pose.ry;
       }
+    }
+    // the page text and header wait for the opening (lib/intro.ts)
+    if (entrance.current === "done" && isIntroDone() && !isHeroReady() && !readyTimer.current) {
+      readyTimer.current = window.setTimeout(markHeroReady, path === "/" && onFinger ? 700 : 0);
     }
 
     // turn first, then roll in the screen plane (a dive reads as a dive even
@@ -476,36 +492,71 @@ export default function Avatar({ pathname }: { pathname: string }) {
       const ph = phase.current;
       // scrolled away or left the page mid-entrance: carry on as normal
       if (path !== "/" || (section && section !== "hero") || footer) entrance.current = "done";
-      else if (entrance.current === "wait") {
-        anim.current = "idle";
-        g.position.x = tx;
-        g.position.z = tz;
-        if (isIntroDone() && ready.current && onFinger) {
-          entrance.current = "drop";
-          ph.t = 0;
-          ph.from = g.position.y;
+      else {
+        // frame by frame (at most 1/30 s each), so a stall while he is first
+        // drawn does not skip the move
+        const edt = Math.min(dt, 1 / 30);
+        // where he lands: a little right of the middle, feet low on the
+        // screen, close to the camera (so big, and in front of the hands)
+        const pf = 10 / (10 - NEAR); // how much nearer things look bigger
+        const big = ts * BIG;
+        const landX = (viewport.width * 0.03) / pf;
+        const landY = (-viewport.height * 0.36) / pf + 1.05 * big;
+        if (entrance.current === "wait") {
+          anim.current = "jump";
+          g.position.set(landX, viewport.height / pf / 2 + big * 2.4, NEAR);
+          g.scale.setScalar(big);
+          g.rotation.y = 0.5;
+          // the hands are in place: a beat, then he drops
+          if (isIntroDone() && ready.current && onFinger) {
+            ph.t += edt;
+            if (ph.t > 0.35) {
+              entrance.current = "drop";
+              ph.t = 0;
+              ph.from = g.position.y;
+            }
+          }
+          return;
         }
-        return;
-      } else if (entrance.current === "drop") {
-        // falling, faster and faster, onto the finger
-        ph.t += dt;
-        const p = Math.min(1, ph.t / 0.9);
-        anim.current = "jump";
-        g.scale.setScalar(ts);
-        g.position.set(tx, ph.from + (standY - ph.from) * p * p, tz);
-        g.rotation.y += (0 - g.rotation.y) * (1 - Math.exp(-dt * 6));
-        if (p >= 1) {
-          entrance.current = "land";
-          ph.t = 0;
+        if (entrance.current === "drop") {
+          // falling, faster and faster
+          ph.t += edt;
+          const p = Math.min(1, ph.t / 0.75);
+          anim.current = "jump";
+          g.position.set(landX, ph.from + (landY - ph.from) * p * p, NEAR);
+          g.rotation.y += (0.35 - g.rotation.y) * (1 - Math.exp(-dt * 5));
+          if (p >= 1) {
+            entrance.current = "land";
+            ph.t = 0;
+          }
+          return;
         }
-        return;
-      } else {
-        // a short dip on landing, then he finds his feet
-        ph.t += dt;
-        anim.current = "idle";
-        const dip = Math.sin(Math.min(1, ph.t / 0.35) * Math.PI) * ts * 0.08;
-        g.position.set(tx, standY - dip, tz);
-        if (ph.t < 0.55) return;
+        if (entrance.current === "land") {
+          // a dip as his feet take the weight, then he stands for a moment
+          ph.t += edt;
+          anim.current = "idle";
+          const dip = Math.sin(Math.min(1, ph.t / 0.35) * Math.PI) * big * 0.1;
+          g.position.set(landX, landY - dip, NEAR);
+          g.rotation.y += (0.1 - g.rotation.y) * (1 - Math.exp(-dt * 5));
+          if (ph.t > 0.75) {
+            entrance.current = "back";
+            ph.t = 0;
+          }
+          return;
+        }
+        // "back": hops back onto the finger, shrinking as he goes further away
+        ph.t += edt;
+        const k = Math.min(1, ph.t / 1.0);
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        anim.current = k < 0.85 ? "jump" : "idle";
+        g.scale.setScalar(big + (ts - big) * e);
+        g.position.set(
+          landX + (tx - landX) * e,
+          landY + (standY - landY) * e + Math.sin(k * Math.PI) * viewport.height * 0.06,
+          NEAR + (tz - NEAR) * e,
+        );
+        g.rotation.y += ((k < 0.7 ? -0.9 : pose.ry) - g.rotation.y) * (1 - Math.exp(-dt * 6));
+        if (k < 1) return;
         entrance.current = "done";
       }
     }

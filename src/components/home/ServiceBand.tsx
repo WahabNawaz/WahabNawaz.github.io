@@ -1,10 +1,12 @@
 "use client";
 
 // Sage band between the role and the work section, like the reference: a
-// stepped, slanted top and bottom edge, "Live" with a moving waveform, one
-// huge line of text drifting by (a phrase per service with a small caption
-// and an "Open for projects" mark) and a dial that turns as you scroll.
-import { useRef } from "react";
+// tall band (72% of the screen) with a stepped, slanted top and bottom edge;
+// as it scrolls in, the step in the top edge slides to the right, so the band
+// "opens" up; "Live" with a moving waveform, one huge line of text drifting
+// by (a phrase per service with a small caption and an "Open for projects"
+// mark) and a dial that turns as you scroll.
+import { useRef, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -34,12 +36,26 @@ function Arrows() {
 
 const BARS = 26;
 
+// top edge: the left part 9svh lower, a 45-degree slope at --x; bottom edge:
+// the right part 8svh higher, a slope at --xb
+const EDGES =
+  "polygon(0 9svh, calc(var(--x) * 1%) 9svh, calc(var(--x) * 1% + 9svh) 0, 100% 0, 100% calc(100% - 8svh), calc(var(--xb) * 1% + 8svh) calc(100% - 8svh), calc(var(--xb) * 1%) 100%, 0 100%)";
+
 export default function ServiceBand() {
   const root = useRef<HTMLElement>(null);
 
   useGSAP(
     () => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(root.current, { "--x": 40, "--xb": 56 });
+        return;
+      }
+      // the steps in the edges: x of the slope, in % of the width
+      gsap.fromTo(
+        root.current,
+        { "--x": 20, "--xb": 64 },
+        { "--x": 40, "--xb": 56, ease: "none", scrollTrigger: { trigger: root.current, start: "top 95%", end: "top 40%", scrub: true } },
+      );
       gsap.fromTo(
         "[data-dial]",
         { rotate: -40 },
@@ -58,7 +74,8 @@ export default function ServiceBand() {
       ref={root}
       aria-label="Services"
       data-pose="band"
-      className="relative z-10 -my-24 overflow-hidden bg-[#d6e3bf] pb-44 pt-48 text-ink [clip-path:polygon(0_13%,50%_13%,57%_0,100%_0,100%_87%,62%_87%,55%_100%,0_100%)]"
+      className="relative z-10 -my-24 overflow-hidden bg-[#dde4c3] pb-44 pt-48 text-ink md:min-h-[72svh] md:pb-0 md:pt-[27svh]"
+      style={{ "--x": 20, "--xb": 64, clipPath: EDGES } as CSSProperties}
     >
       <div className="absolute right-5 top-[17%] flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest md:right-8">
         <span aria-hidden className="flex h-5 items-center gap-[2px]">
@@ -95,7 +112,7 @@ export default function ServiceBand() {
       </Marquee>
 
       {/* the dial: tick marks on an arc, numbered every five */}
-      <div aria-hidden className="pointer-events-none absolute bottom-[4%] left-1/2 hidden -translate-x-1/2 md:block">
+      <div aria-hidden className="pointer-events-none absolute bottom-[-2%] left-1/2 hidden -translate-x-1/2 md:block">
         <svg data-dial viewBox="-110 -110 220 220" className="size-56 text-ink">
           {Array.from({ length: 21 }, (_, i) => {
             const a = ((-150 + i * 6) * Math.PI) / 180;

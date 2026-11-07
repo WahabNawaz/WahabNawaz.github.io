@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLenis } from "lenis/react";
 import gsap from "gsap";
-import { onIntroDone } from "@/lib/intro";
+import { onHeroReady, onIntroDone } from "@/lib/intro";
 import { nav, site } from "@/content/site";
 import RollText from "./RollText";
 import SoundToggle from "./SoundToggle";
@@ -26,12 +26,15 @@ export default function Header() {
   const panel = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
-  // Opening: the bar slides in last, after the character and the headline.
+  // Opening: the bar slides in once the opening is over (on the home page,
+  // after the character has sat down; elsewhere right after the preloader).
   useEffect(() => {
     const el = bar.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.set(el, { yPercent: -120, autoAlpha: 0 });
-    return onIntroDone(() => gsap.to(el, { yPercent: 0, autoAlpha: 1, duration: 0.9, delay: 0.9, ease: "power3.out" }));
+    const home = (window.location.pathname.replace(/\/$/, "") || "/") === "/";
+    const show = () => gsap.to(el, { yPercent: 0, autoAlpha: 1, duration: 0.9, delay: home ? 0 : 0.3, ease: "power3.out" });
+    return home ? onHeroReady(show) : onIntroDone(show);
   }, []);
 
   // While open: no page scrolling, focus moves into the menu and Tab stays

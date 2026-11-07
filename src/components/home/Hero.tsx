@@ -7,7 +7,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { site } from "@/content/site";
-import { onIntroDone } from "@/lib/intro";
+import { onHeroReady } from "@/lib/intro";
 import SkyToggle from "@/components/SkyToggle";
 
 gsap.registerPlugin(useGSAP);
@@ -18,13 +18,13 @@ export default function Hero() {
   useGSAP(
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      // built paused, plays when the preloader lifts (or at once on later visits)
+      // built paused, plays once the opening is over: like the reference, the
+      // headline and the rest come after the character has sat down
       const tl = gsap.timeline({ paused: true });
       tl.from("[data-line]", { yPercent: 110, duration: 1.1, stagger: 0.08, ease: "power4.out" })
         .from("[data-fade]", { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.1 }, 0.45)
         .from("[data-arrow] path", { strokeDashoffset: 120, duration: 1, ease: "power2.out" }, 0.9);
-      // starts just after the character begins walking in and the camera rises
-      return onIntroDone(() => gsap.delayedCall(0.35, () => tl.play()));
+      return onHeroReady(() => tl.play());
     },
     { scope: ref },
   );

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { sceneStore, type SkyMode } from "@/lib/scene-store";
+import { cloudsIn } from "@/lib/intro";
 import { pointer } from "./pointer";
 import HeroArt from "./HeroArt";
 
@@ -174,7 +175,7 @@ function SkyPlane({ mode }: { mode?: SkyMode }) {
       uContrast: { value: p.contrast },
       uSat: { value: p.sat },
       uStars: { value: p.stars },
-      uClouds: { value: p.clouds },
+      uClouds: { value: p.clouds * (mode ? 1 : cloudsIn()) },
       uCover: { value: p.cover },
       uTime: { value: 0 },
       uRes: { value: new THREE.Vector2(1, 1) },
@@ -196,10 +197,14 @@ function SkyPlane({ mode }: { mode?: SkyMode }) {
     u.uBottom.value.lerp(tmp.set(p.bottom), k);
     u.uGlow.value.lerp(tmp.set(p.glow), k);
     u.uGlowPos.value.lerp(tmpV.set(p.glowPos[0], p.glowPos[1]), k);
-    for (const key of ["glowSize", "mist", "contrast", "sat", "stars", "clouds", "cover", "aurora"] as const) {
+    for (const key of ["glowSize", "mist", "contrast", "sat", "stars", "cover", "aurora"] as const) {
       const name = `u${key[0].toUpperCase()}${key.slice(1)}` as "uGlowSize";
       u[name].value += (p[key] - u[name].value) * k;
     }
+    // the hero sky has no clouds under the preloader; they roll in while the
+    // hands fly in (lib/intro.ts cloudsIn)
+    const clouds = p.clouds * (mode ? 1 : cloudsIn());
+    u.uClouds.value += (clouds - u.uClouds.value) * (mode ? k : 1 - Math.exp(-dt * 5));
     u.uTime.value += dt;
     u.uRes.value.set(size.width, size.height);
     u.uPointer.value.lerp(tmpV.set(pointer.x, pointer.y), 1 - Math.exp(-dt * 2));

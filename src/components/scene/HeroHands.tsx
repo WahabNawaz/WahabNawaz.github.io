@@ -18,7 +18,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { asset, sceneStore } from "@/lib/scene-store";
-import { isIntroDone } from "@/lib/intro";
+import { isIntroDone, opening } from "@/lib/intro";
 import { pointer } from "./pointer";
 import { heroSeat } from "./heroSeat";
 
@@ -60,6 +60,7 @@ type Rig = {
   knuckles: THREE.Vector3; // back of the hand by the knuckles, in the file's units
   wrist: THREE.Vector3;
   patina: { value: number }; // model units per world unit, for the patina noise
+  forearm?: THREE.Object3D; // the added arm (with its ivy); scale.z = length from the cut
 };
 
 const D = Math.PI / 180;
@@ -149,7 +150,7 @@ function leafGeometry() {
  * from the cut, measured on the mesh, so the arm can run off screen. Ivy winds
  * round it: a thin stem in a spiral with leaves along it.
  */
-function addForearm(root: THREE.Object3D, wrist: THREE.Object3D | undefined, material: THREE.Material, seed: number) {
+function addForearm(root: THREE.Object3D, wrist: THREE.Object3D | undefined, material: THREE.Material, seed: number): THREE.Object3D | undefined {
   let mesh: THREE.SkinnedMesh | undefined;
   root.traverse((o) => {
     if ((o as THREE.SkinnedMesh).isSkinnedMesh) mesh = o as THREE.SkinnedMesh;
@@ -180,7 +181,14 @@ function addForearm(root: THREE.Object3D, wrist: THREE.Object3D | undefined, mat
   geo.translate(cx, cy, 0);
   const arm = new THREE.Mesh(geo, material);
   arm.frustumCulled = false;
-  wrist.add(arm);
+  // all of it hangs from a group at the cut, so it can be shortened from there
+  const forearm = new THREE.Group();
+  forearm.position.set(0, 0, z0);
+  const inner = new THREE.Group();
+  inner.position.set(0, 0, -z0);
+  forearm.add(inner);
+  wrist.add(forearm);
+  inner.add(arm);
 
   // ivy: stem spiralling round the arm from just behind the hand
   let r = seed;
@@ -196,7 +204,7 @@ function addForearm(root: THREE.Object3D, wrist: THREE.Object3D | undefined, mat
   const stemMat = new THREE.MeshStandardMaterial({ color: "#3a4a2a", roughness: 0.9 });
   const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.0014, 6), stemMat);
   stem.frustumCulled = false;
-  wrist.add(stem);
+  inner.add(stem);
 
   const leafMat = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.7, side: THREE.DoubleSide });
   const COUNT = 90;
@@ -219,7 +227,8 @@ function addForearm(root: THREE.Object3D, wrist: THREE.Object3D | undefined, mat
     leaves.setMatrixAt(i, m);
     leaves.setColorAt(i, color.setHSL(0.25 + rand() * 0.07, 0.35 + rand() * 0.2, 0.1 + rand() * 0.1));
   }
-  wrist.add(leaves);
+  inner.add(leaves);
+  return forearm;
 }
 
 /** Copy of the hand with its joints chained (the file has them flat) so a bend
@@ -248,11 +257,11 @@ function buildRig(src: THREE.Object3D, seed: number): Rig {
   }
   const rest = new Map<THREE.Object3D, THREE.Quaternion>();
   Object.values(bones).forEach((b) => rest.set(b, b.quaternion.clone()));
-  addForearm(root, bones.wrist, material, seed);
+  const forearm = addForearm(root, bones.wrist, material, seed);
   const at = (n: string) => (bones[n] ? root.worldToLocal(bones[n].getWorldPosition(new THREE.Vector3())) : new THREE.Vector3());
   const wrist = at("wrist");
   const knuckles = wrist.clone().lerp(at("middle-finger-phalanx-proximal"), 0.72);
-  return { root, bones, rest, knuckles, wrist, patina };
+  return { root, bones, rest, knuckles, wrist, patina, forearm };
 }
 
 /** Rest pose, then the bends. `breathe` (0..1) adds a slow finger movement. */
@@ -266,6 +275,11 @@ function poseRig(rig: Rig, pose: HandPose, t: number, breathe: number) {
     const wave = Math.sin(t * 1.1 - fi * 0.45) * 5 * breathe;
     joints.forEach((n, i) => rig.bones[n]?.rotateX(-((a[i] ?? 0) + wave * (i === 0 ? 0.6 : 1)) * D));
   });
+}
+
+/** The added forearm's length from the cut: a stub far away (f = 0), full at f = 1. */
+function setArmLength(rig: Rig, f: number) {
+  if (rig.forearm) rig.forearm.scale.z = 0.12 + 0.88 * f;
 }
 
 const _s = new THREE.Vector3();
@@ -288,32 +302,86 @@ const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 
 /**
- * Left hand the character lands and sits on, in the home hero. It comes in
- * from the lower left (wrist at the screen edge), rises up once the preloader
- * lifts, and tells the character where the top of its index finger is.
+ * The opening, like the reference: once the preloader has gone, both hands
+ * start small and far away in the middle of the sky, fingertips nearly
+ * touching, and fly towards the camera into their places (they grow the way
+ * something coming closer does: slowly at first, then fast). It plays once,
+ * and only if the page opens on the hero. While the preloader is still up they
+ * already wait there, small (and get drawn once, so the first real frame does
+ * not stall).
+ */
+const FLY = 2.2; // seconds
+const S0 = 0.18; // starting size, share of the final size
+/** 0..1 how far the hands have come; -1 = not playing (yet). */
+function flyIn() {
+  if (opening.done) return 1;
+  if (opening.k < 0) return waiting() ? 0 : -1;
+  const k = Math.min(1, Math.max(0, opening.k));
+  // depth eased in and out; size ~ 1 / distance
+  const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const size = 1 / (1 / S0 + (1 - 1 / S0) * e);
+  return (size - S0) / (1 - S0);
+}
+const sizeAt = (f: number) => S0 + (1 - S0) * f;
+// under the preloader, on the hero: the hands wait small in the middle
+const waiting = () => !isIntroDone() && heroSeat.active;
+
+/**
+ * Left hand the character lands and sits on, in the home hero (wrist at the
+ * lower-left screen edge). It flies in at the opening (see above), rises back
+ * in when you scroll up to the hero, and tells the character where the top of
+ * its index finger is.
  */
 export function SeatHand() {
   const rig = useHand("left");
   const turn = useRef<THREE.Group>(null);
   const shown = useRef(0);
+  const tip = useRef<THREE.Vector3 | null>(null); // index fingertip, in the hand's own space
 
   useFrame(({ clock, viewport }, dt) => {
     const g = turn.current;
     if (!g) return;
-    const on = heroSeat.active && isIntroDone() ? 1 : 0;
-    shown.current += (on - shown.current) * (1 - Math.exp(-dt * (on ? 2.2 : 4)));
+    const t = clock.elapsedTime;
+    // the opening starts as the preloader fades, if the page opens on the hero;
+    // it moves on by frames (at most 1/30 s each), from a short pause
+    if (!opening.done && opening.k <= -1 && isIntroDone()) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (heroSeat.active && !reduce) opening.k = -0.0001 - 0.15 / FLY;
+      else opening.done = true;
+    }
+    if (!opening.done && isIntroDone() && opening.k > -1) {
+      opening.k += Math.min(dt, 1 / 30) / FLY;
+      if (opening.k >= 1) opening.done = true;
+    }
+    const fly = opening.k < 0 && isIntroDone() && !opening.done ? 0 : flyIn();
+    const on = heroSeat.active && fly >= 0 ? 1 : 0;
+    if (fly >= 0 && fly < 1) shown.current = 1; // flying in: no rise from below
+    else shown.current += (on - shown.current) * (1 - Math.exp(-dt * (on ? 2.2 : 4)));
     const r = shown.current;
-    g.visible = r > 0.005;
-    heroSeat.ready = r > 0.6;
+    g.visible = r > 0.005 && fly >= 0;
+    heroSeat.ready = r > 0.6 && fly >= 1;
     if (!g.visible) return;
-    poseRig(rig, RESTING, clock.elapsedTime, 0.6);
+    poseRig(rig, RESTING, t, 0.6);
     updatePatina(rig);
     const h = viewport.height;
     const w = viewport.width;
     const L = handLength(w, h);
-    g.scale.setScalar(L);
     const lift = viewport.aspect < 0.8 ? 0.36 : 0.27; // phones: clear of the sky switch
-    g.position.set(-w / 2 + w * 0.1, -h / 2 + h * lift - (1 - r) * h * 0.7, 0);
+    const x1 = -w / 2 + w * 0.1;
+    const y1 = -h / 2 + h * lift - (1 - r) * h * 0.7;
+    if (!tip.current) {
+      g.scale.setScalar(L);
+      g.position.set(x1, y1, 0);
+      g.updateMatrixWorld(true);
+      tip.current = g.worldToLocal(rig.bones["index-finger-tip"].getWorldPosition(new THREE.Vector3()));
+    }
+    // fingertip starts just left of and below the middle of the sky
+    const x0 = -0.03 * w - S0 * L * tip.current.x;
+    const y0 = -0.05 * h - S0 * L * tip.current.y;
+    g.scale.setScalar(L * sizeAt(fly));
+    g.position.set(x0 + (x1 - x0) * fly, y0 + (y1 - y0) * fly, 0);
+    // far away only a stub of the arm shows, like a statue's
+    setArmLength(rig, fly);
     // the seat: along the index finger, on its upper surface
     g.updateMatrixWorld(true);
     rig.bones["index-finger-phalanx-proximal"].getWorldPosition(_a);
@@ -350,7 +418,7 @@ export function ReachingHand() {
   const group = useRef<THREE.Group>(null);
   const aim = useRef<THREE.Group>(null);
   const shown = useRef(0);
-  const since = useRef<number | null>(null);
+  const tip = useRef<THREE.Vector3 | null>(null); // index fingertip, in the hand's own space
 
   useFrame(({ clock, viewport, camera }, dt) => {
     const g = group.current;
@@ -360,13 +428,13 @@ export function ReachingHand() {
     const { section } = sceneStore.get();
     const wide = viewport.aspect >= 0.8;
     const onHero = section === "hero";
-    // comes in a moment after the preloader lifts
-    if (isIntroDone() && since.current === null) since.current = t;
-    const ready = since.current !== null && t - since.current > 1.2;
-    const target = wide && onHero && ready ? 1 : 0;
-    shown.current += (target - shown.current) * (1 - Math.exp(-dt * (target ? 1.4 : 4)));
+    // flies in with the other hand (SeatHand runs the opening)
+    const fly = opening.k < 0 && isIntroDone() && !opening.done ? 0 : flyIn();
+    const target = wide && onHero && fly >= 0 ? 1 : 0;
+    if (fly >= 0 && fly < 1) shown.current = 1;
+    else shown.current += (target - shown.current) * (1 - Math.exp(-dt * (target ? 1.4 : 4)));
     const s = shown.current;
-    g.visible = s > 0.005;
+    g.visible = s > 0.005 && fly >= 0 && wide;
     const state = s > 0.5 ? "shown" : "hidden";
     if (document.documentElement.dataset.hands !== state) document.documentElement.dataset.hands = state;
     if (!g.visible) return;
@@ -377,13 +445,22 @@ export function ReachingHand() {
     const w = viewport.width;
     // same size as the seat hand; wrist just past the top-right corner, slides
     // in along its own arm
-    g.scale.setScalar(handLength(w, h));
+    const L = handLength(w, h);
     const back = (1 - s) * h * 0.8;
-    g.position.set(
-      w / 2 + h * 0.02 + back * Math.cos(TILT) + pointer.x * 0.12,
-      h / 2 - h * 0.12 + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08,
-      0.5,
-    );
+    const x1 = w / 2 + h * 0.02 + back * Math.cos(TILT) + pointer.x * 0.12;
+    const y1 = h / 2 - h * 0.12 + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08;
+    if (!tip.current) {
+      g.scale.setScalar(L);
+      g.position.set(x1, y1, 0.5);
+      g.updateMatrixWorld(true);
+      tip.current = g.worldToLocal(rig.bones["index-finger-tip"].getWorldPosition(new THREE.Vector3()));
+    }
+    // fingertip starts just right of and above the middle, near the other one
+    const x0 = 0.025 * w - S0 * L * tip.current.x;
+    const y0 = 0.05 * h - S0 * L * tip.current.y;
+    g.scale.setScalar(L * sizeAt(fly));
+    g.position.set(x0 + (x1 - x0) * fly, y0 + (y1 - y0) * fly, 0.5);
+    setArmLength(rig, fly);
     // the finger turns a little towards the mouse
     a.getWorldPosition(_wrist).project(camera);
     const ang = Math.atan2(pointer.y - _wrist.y, (pointer.x - _wrist.x) * viewport.aspect);
