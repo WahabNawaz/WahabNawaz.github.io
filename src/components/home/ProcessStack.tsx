@@ -23,6 +23,9 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const MEDIA = 0.49; // picture width at full size, share of the screen width
 const SMALL = 0.6; // picture size while it is not the current step
 const SPAN = 0.555; // how far (share of the screen height) it takes to grow or shrink
+// The text keeps a clear gap (3vw) from the picture's inner edge. Its box is
+// set from the same container edges as the picture (not from the screen
+// width), so a visible scrollbar cannot push the two together.
 const ease = (k: number) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) * (1 - k)); // power2.inOut
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -73,7 +76,9 @@ export default function ProcessStack() {
           gsap.set(figs[i], { scale: s, transformOrigin: left ? "0% 50%" : "100% 50%" });
           gsap.set(copies[i], { x: shift });
           const h = r.height * s;
-          return { x: left ? w * s : W - w * s, top: r.top + (r.height - h) / 2, bottom: r.top + (r.height + h) / 2, innerTop: r.top };
+          // the picture's inner edge, measured from the container's own edges
+          // (with a visible scrollbar the container is narrower than the screen)
+          return { x: left ? box.left + w * s : box.right - w * s, top: r.top + (r.height - h) / 2, bottom: r.top + (r.height + h) / 2, innerTop: r.top };
         });
         // the links: inner bottom corner of one picture -> inner top corner of the next
         links.forEach((p, i) => {
@@ -152,8 +157,8 @@ export default function ProcessStack() {
                 <div data-step-inner className="grid gap-8 md:sticky md:top-[calc(50svh_-_13.78vw)] md:block md:h-[27.56vw]">
                   <div
                     data-step-text
-                    className={`md:absolute md:inset-y-0 md:flex md:w-[47vw] md:flex-col md:justify-center ${
-                      mediaLeft ? "md:left-[51vw]" : "md:left-[3.4vw] md:items-end md:text-right"
+                    className={`md:absolute md:inset-y-0 md:flex md:flex-col md:justify-center ${
+                      mediaLeft ? "md:left-[52vw] md:right-[3.4vw]" : "md:left-[3.4vw] md:right-[52vw] md:items-end md:text-right"
                     }`}
                   >
                     <span className="block overflow-hidden">
