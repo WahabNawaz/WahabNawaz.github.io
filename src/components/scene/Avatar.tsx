@@ -310,6 +310,11 @@ function SeatProps({ seat, place }: { seat: { current: Seat }; place: { current:
   );
 }
 
+// How far in front of the finger's centre line he sits on the hero hand, in
+// character sizes (0 = on the centre line: his right shin went through the
+// finger, which points right and towards the camera).
+const SEAT_FORWARD = 0.22;
+
 export default function Avatar({ pathname }: { pathname: string }) {
   const root = useRef<THREE.Group>(null);
   const hop = useRef<THREE.Group>(null);
@@ -433,7 +438,9 @@ export default function Avatar({ pathname }: { pathname: string }) {
       const sitY = heroSeat.fy + (0.1 - seat.current.hipY) * ts;
       const back = seat.current.hipZ * ts; // the hips sit a little behind the feet line
       tx = heroSeat.fx - Math.sin(pose.ry) * back;
-      tz = heroSeat.fz - Math.cos(pose.ry) * back;
+      // a little in front of the finger's centre line (towards the camera), so
+      // his legs hang down in front of the finger instead of through it
+      tz = heroSeat.fz - Math.cos(pose.ry) * back + SEAT_FORWARD * ts;
       ty = standY + (sitY - standY) * seated.current;
     }
     // first frame: on the home hero, wait above the screen for the drop;
