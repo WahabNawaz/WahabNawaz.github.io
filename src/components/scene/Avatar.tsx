@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
 import { isIntroDone } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
-import { animFor, edgePose, footerPose, poseFor, risePose, scrollPose, type ScrollPose } from "./poses";
+import { animFor, edgePose, footerAnim, footerPose, poseFor, processPose, risePose, scrollPose, type ScrollPose } from "./poses";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
 import { heroSeat } from "./heroSeat";
@@ -316,6 +316,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
   const placed = useRef(false);
   const anim = useRef<AnimState>("typing");
   const dangle = useRef(0);
+  const footSince = useRef(-1); // when the footer came on screen (clock seconds), -1 = not on
   const seat = useRef<Seat>({ w: 0, hipY: -0.1, hipZ: 0, kneeY: -0.1, kneeZ: 0.4 });
   // Opening: on the home page, once the preloader lifts and the big bronze hand
   // has risen, the character drops in from above, lands on its index finger,
@@ -389,7 +390,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     }
     // clients -> services: he follows the bottom edge of the dark clients
     // section (walk, trip, tumble over it, hang upside down at the top-left);
-    // showcase: up and away; process: out of sight (poses.ts)
+    // showcase: up and away; process: in at step 03 only (poses.ts)
     if (!mobile && !footer && path === "/" && (section === "clients" || section === "services")) {
       const el = document.querySelector<HTMLElement>('[data-pose="clients"]');
       if (el) scrubbed = edgePose(el.getBoundingClientRect().bottom / innerHeight, state.clock.elapsedTime);
@@ -399,13 +400,23 @@ export default function Avatar({ pathname }: { pathname: string }) {
       if (el) scrubbed = risePose(el.getBoundingClientRect().top / innerHeight);
     }
     if (!mobile && !footer && path === "/" && section === "process") {
-      scrubbed = { ...pose, roll: 0, anim: "idle", hide: true };
+      const el = document.querySelectorAll<HTMLElement>('[data-pose="process"] [data-step]')[2];
+      scrubbed = processPose(el ? el.getBoundingClientRect().top / innerHeight : null);
     }
-    // footer (every page): standing on the right, rising with the footer
-    if (!mobile && footer) {
-      const el = document.querySelector<HTMLElement>("footer[data-site-footer]");
-      if (el) scrubbed = footerPose(el.getBoundingClientRect().top / innerHeight);
-    }
+    // footer (every page): standing on the right, rising with the footer;
+    // waves, stands, chats in turn (poses.ts footerAnim), starting with the
+    // wave once he is in view (his head well up the screen)
+    const foot = footer
+      ? (document.querySelector<HTMLElement>("[data-footer-body]") ?? document.querySelector<HTMLElement>("footer[data-site-footer]"))
+      : null;
+    const footBottom = foot ? foot.getBoundingClientRect().bottom / innerHeight : 2;
+    if (footer && footBottom < 1.25 && footSince.current < 0) footSince.current = state.clock.elapsedTime;
+    if (!footer) footSince.current = -1;
+    const since = footSince.current < 0 ? 0 : state.clock.elapsedTime - footSince.current;
+    // (the playground's dance always wins)
+    const dancing = path === "/playground" && dance.active;
+    if (footer && !dancing) anim.current = footerAnim(since);
+    if (!mobile && foot) scrubbed = { ...footerPose(footBottom, since), ...(dancing ? { anim: undefined } : {}) };
     if (scrubbed && section !== "name") {
       tx = (scrubbed.x * viewport.width) / 2;
       ty = (scrubbed.y * viewport.height) / 2;

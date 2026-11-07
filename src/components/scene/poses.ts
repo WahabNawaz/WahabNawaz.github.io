@@ -34,10 +34,10 @@ export const NAMED: Record<string, Pose> = {
   band: { x: 0.3, y: -0.4, ry: 1.2, s: 0.66 },
   // services: hanging upside down from the top-left edge (the real spot,
   // roll and arms come from edgePose below); showcase: gone up out of sight;
-  // process: out of sight below the footer
+  // process: in at step 03 only (processPose below)
   services: { x: -0.72, y: 1.12, ry: 0.4, s: 1.2 },
   brand: { x: -0.72, y: 2.2, ry: 0.4, s: 1.2 },
-  process: { x: 0.74, y: -1.8, ry: -0.35, s: 1.4 },
+  process: { x: 0.7, y: -2.8, ry: -0.25, s: 1.24 },
   clients: { x: 0.6, y: -0.4, ry: -0.5, s: 0.6 },
   // standing in the middle of the big role title, on its own shadow
   role: { x: 0.02, y: -0.12, ry: -0.15, s: 0.72 },
@@ -64,8 +64,8 @@ const MOBILE_CORNER: Pose = { x: 0.62, y: -0.78, ry: -0.5, s: 0.3 };
 const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.5, s: 0.56 };
 
 // Footer text sits on the left, so the character stands on the right, big,
-// feet near the bottom of the screen (like the reference).
-const FOOTER: Pose = { x: 0.74, y: -0.5, ry: -0.35, s: 1.1 };
+// feet near the bottom of the screen (like the reference; footerPose below).
+const FOOTER: Pose = { x: 0.7, y: -0.5, ry: -0.25, s: 1.24 };
 
 export function poseFor(pathname: string, section: string | null, mobile: boolean, footer = false): Pose {
   const path = pathname.replace(/\/$/, "") || "/";
@@ -127,7 +127,8 @@ export function animFor(
  * - band: dives off the role title down past the band;
  * - work: out of sight while the black circle opens, then dives over the
  *   pinned WORK title from left to right and is gone again for the projects;
- * (clients, services, showcase and footer: see edgePose, risePose, footerPose)
+ * (clients, services, showcase, process and footer: see edgePose, risePose,
+ * processPose, footerPose)
  * roll turns him in the screen plane (+ = anticlockwise); hide = not drawn
  * (he jumps there at once instead of flying across the screen).
  */
@@ -212,10 +213,48 @@ export function risePose(top: number): ScrollPose {
   return { x: HANG.x, y: yAt(HANG.hips - k * 0.5), ry: HANG.ry, s: HANG.s, roll: HANG.roll, anim: "idle", dangle: 1, hide: hidden };
 }
 
+// Measured on screen: the pose point is at his hips; at size s the soles are
+// 0.21 * s screen heights below it and the top of the head 0.18 * s above.
+const LEGS = 0.21;
+const TORSO = 0.18;
+// The footer character: right side, facing the visitor, a little turned
+// towards the footer text; about half the screen tall (like the reference).
+const FOOT = { x: 0.7, ry: -0.25, s: 1.24 };
+
 /**
- * Footer: standing on the right, big, moving up with the footer as it
- * scrolls in (`top` = the footer's top edge on screen, 0..1 from the top).
+ * Process, like the reference: at step 03 he jumps up from the bottom of the
+ * screen and stands in front of the step's title, his feet 0.67 screen
+ * heights below the top of the step's block, so he scrolls with the page,
+ * and jumps off the top. `top` = the top of step 03's block on screen (0..1
+ * from the top). Before that he waits out of sight where he will come in;
+ * after it, out of sight below the footer's right side, so he rises with the
+ * footer without flying across the screen.
  */
-export function footerPose(top: number): ScrollPose {
-  return { x: 0.74, y: yAt(top + 0.36), ry: -0.35, s: 1.4, roll: 0, anim: "idle" };
+export function processPose(top: number | null): ScrollPose {
+  const below = { ...FOOT, y: yAt(1.9), roll: 0, anim: "idle" as AnimState, hide: true };
+  if (top === null) return below;
+  const s = 1.15;
+  const soles = top + 0.67;
+  const hips = soles - LEGS * s;
+  const head = hips - TORSO * s;
+  const pose = { x: -0.09, y: yAt(hips), ry: 0.5, s, roll: 0 };
+  if (soles < -0.02) return below;
+  if (head > 1.02) return { ...pose, anim: "jump", hide: true };
+  return { ...pose, anim: top > 0.33 || top < -0.3 ? "jump" : "idle" };
+}
+
+// In the footer he greets, then stands and chats, round and round:
+// wave, stand, talk, stand (seconds since the footer came on screen).
+export function footerAnim(since: number): AnimState {
+  const c = since % 16;
+  return c < 3.4 ? "wave" : c < 8 ? "idle" : c < 12.5 ? "talk" : "idle";
+}
+
+/**
+ * Footer: standing on the right, feet just above the footer's bottom edge, so
+ * he rises with the footer as it scrolls in (`bottom` = the footer's bottom
+ * edge on screen, 0..1 from the top). `since` = seconds the footer has been on.
+ */
+export function footerPose(bottom: number, since: number): ScrollPose {
+  return { ...FOOT, y: yAt(bottom - 0.017 - LEGS * FOOT.s), roll: 0, anim: footerAnim(since) };
 }

@@ -11,6 +11,9 @@ import { useGSAP } from "@gsap/react";
 import Marquee from "@/components/Marquee";
 import { services } from "@/content/data";
 
+// rounded, so the server and the browser print the same numbers (no hydration warning)
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 function Spark() {
@@ -100,9 +103,9 @@ export default function ServiceBand() {
             const r1 = long ? 78 : 84;
             return (
               <g key={i}>
-                <line x1={Math.cos(a) * r1} y1={Math.sin(a) * r1} x2={Math.cos(a) * 92} y2={Math.sin(a) * 92} stroke="currentColor" strokeWidth={long ? 1.6 : 1} />
+                <line x1={r2(Math.cos(a) * r1)} y1={r2(Math.sin(a) * r1)} x2={r2(Math.cos(a) * 92)} y2={r2(Math.sin(a) * 92)} stroke="currentColor" strokeWidth={long ? 1.6 : 1} />
                 {long && (
-                  <text x={Math.cos(a) * 66} y={Math.sin(a) * 66 + 3} fontSize="9" textAnchor="middle" fill="currentColor" className="font-mono">
+                  <text x={r2(Math.cos(a) * 66)} y={r2(Math.sin(a) * 66 + 3)} fontSize="9" textAnchor="middle" fill="currentColor" className="font-mono">
                     {i / 5 + 1}
                   </text>
                 )}

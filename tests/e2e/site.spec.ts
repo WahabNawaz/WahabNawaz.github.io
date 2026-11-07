@@ -343,6 +343,9 @@ test.describe("site", () => {
     await scrollTo(page, "bottom");
     await page.waitForTimeout(1500);
     await expect(page.getByRole("contentinfo")).toBeInViewport();
+    // he greets, then stands and chats in turn (poses.ts footerAnim, a 16 s round)
+    await expect(avatar(page)).toHaveAttribute("data-avatar", /^(wave|idle|talk)$/, { timeout: 10_000 });
+    await expect(avatar(page)).toHaveAttribute("data-avatar", "wave", { timeout: 20_000 });
     await expect(avatar(page)).toHaveAttribute("data-avatar", "idle", { timeout: 10_000 });
     await shot(page, info, "18-footer");
     expect(errors).toEqual([]);
