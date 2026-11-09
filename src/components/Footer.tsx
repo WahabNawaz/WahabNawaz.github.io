@@ -81,19 +81,21 @@ export default function Footer() {
 
   return (
     <footer ref={ref} data-site-footer className="relative isolate z-10 text-ink">
-      <div data-footer-body className="relative overflow-hidden px-5 pb-6 pt-4 md:flex md:min-h-[70svh] md:flex-col md:px-8 md:pt-[11svh]">
+      <div data-footer-body className="relative overflow-hidden px-5 pb-6 pt-16 md:flex md:min-h-[70svh] md:flex-col md:px-8 md:pt-[11svh]">
         {/* a bright day sky with soft clouds, like the reference, whatever the
             hero's sky is set to; the character stands on the right (poses.ts
             footerPose) */}
         <Sky mode="day" className="absolute inset-0 -z-10 bg-[#b9c9e4]" />
-        <p className="text-[11px] opacity-70">Lorem ipsum? Good sign.</p>
-        <div className="mt-1 grid gap-8 md:grid-cols-[42%_1fr] md:pr-[22%]">
-          <h2 className="font-display text-5xl font-normal leading-[1.02] tracking-tight md:text-[4.4vw]">
+        <p className="text-sm font-semibold opacity-80 md:text-[11px] md:font-normal md:opacity-70">Lorem ipsum? Good sign.</p>
+        {/* phones, like the reference: the heading big on the left, the email
+            block under it on the right */}
+        <div className="mt-2 grid gap-12 md:mt-1 md:grid-cols-[42%_1fr] md:gap-8 md:pr-[22%]">
+          <h2 className="font-display text-[12.5vw] font-normal leading-[1.02] tracking-tight md:text-[4.4vw]">
             Got something
             <br />
             worth building?
           </h2>
-          <div className="md:pt-[4.4vw]">
+          <div className="text-right md:pt-[4.4vw] md:text-left">
             <p className="text-xs">Email me</p>
             <a href={`mailto:${site.email}`} className="mt-1 inline-block font-display text-3xl tracking-tight hover:text-accent md:text-[3.3vw]">
               {site.email}
@@ -117,7 +119,8 @@ export default function Footer() {
               ))}
             </ul>
           </div>
-          <div>
+          {/* (on phones the character stands to the right of this column) */}
+          <div data-footer-stand>
             <p className="mb-3 font-mono text-[10px] uppercase tracking-widest opacity-60">Social</p>
             <ul className="space-y-1">
               {site.socials.map((s) => (

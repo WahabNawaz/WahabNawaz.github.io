@@ -75,15 +75,18 @@ export default function Header() {
   return (
     <>
       <header ref={bar} className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-5 py-4 mix-blend-difference text-white md:px-8">
-        <Link href="/" className="flex items-center gap-3" aria-label={`${site.name}, home`}>
-          <span className="grid size-9 place-items-center rounded-full border border-white font-mono text-xs">
+        {/* like the reference: the mark on the left with the name next to it
+            on phones and tablets, the name in the middle of the bar on wide
+            screens; sound and a big MENU on the right */}
+        <Link href="/" className="flex items-center gap-2.5 md:gap-3" aria-label={`${site.name}, home`}>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white font-mono text-[11px] md:size-9 md:text-xs">
             {site.shortName}
           </span>
-          <span className="hidden font-display text-sm font-semibold tracking-tight sm:block">
+          <span className="whitespace-nowrap font-display text-[clamp(1.1rem,5.4vw,1.35rem)] font-medium leading-none tracking-[-0.03em] lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:text-[1.4rem]">
             {site.name}
           </span>
         </Link>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           <SoundToggle />
           <button
             ref={menuBtn}
@@ -91,7 +94,7 @@ export default function Header() {
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="site-menu"
-            className="font-mono text-xs uppercase tracking-widest"
+            className="font-display text-[clamp(1.1rem,5.4vw,1.35rem)] font-medium uppercase leading-none tracking-[-0.01em] lg:text-[1.4rem]"
           >
             <RollText key={open ? "close" : "menu"} text={open ? "Close" : "Menu"} />
           </button>

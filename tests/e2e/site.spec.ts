@@ -60,10 +60,8 @@ test.describe("site", () => {
     // the hands fly in, he drops in big, hops back onto the big open hand,
     // sits down and types (frame by frame, so slow in a headless browser)
     await expect(avatar(page)).toHaveAttribute("data-avatar", "typing", { timeout: 45_000 });
-    // the pointing hand comes in from the right on landscape screens (hidden on portrait ones)
-    const vp0 = page.viewportSize()!;
-    if (vp0.width / vp0.height >= 0.8) await expect(avatar(page)).toHaveAttribute("data-hands", "shown", { timeout: 10_000 });
-    else await expect(avatar(page)).toHaveAttribute("data-hands", "hidden");
+    // the pointing hand comes in from the top right (on every screen size, like the reference)
+    await expect(avatar(page)).toHaveAttribute("data-hands", "shown", { timeout: 10_000 });
     // the avatar blinks every few seconds
     const blinks = async () => Number((await avatar(page).getAttribute("data-avatar-blinks")) ?? 0);
     const before = await blinks();

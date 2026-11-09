@@ -38,8 +38,9 @@ export default function ServicesSpread() {
 
   return (
     <section ref={root} data-pose="services" className="relative px-5 pb-32 md:px-8">
-      {/* continues the dark clients section as a strip under the header */}
-      <div aria-hidden className="pointer-events-none sticky top-0 z-20 -mx-5 -mt-[68px] hidden h-[68px] bg-ink md:-mx-8 md:block" />
+      {/* continues the dark clients section as a strip under the header (he
+          hangs from it; phones too) */}
+      <div aria-hidden className="pointer-events-none sticky top-0 z-20 -mx-5 -mt-[68px] block h-[68px] bg-ink md:-mx-8" />
 
       <div className="grid gap-12 pt-28 md:grid-cols-[0.92fr_1fr] md:pt-0">
         <div className="md:sticky md:top-0 md:h-svh md:self-start">

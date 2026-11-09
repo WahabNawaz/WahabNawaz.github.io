@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { sceneStore } from "@/lib/scene-store";
 import { isHeroReady, isIntroDone, markHeroReady } from "@/lib/intro";
 import { avatar, type AnimState } from "@/content/avatar";
-import { animFor, edgePose, footerAnim, footerPose, poseFor, processPose, risePose, rolePose, scrollPose, type ScrollPose } from "./poses";
+import { animFor, edgePose, footerAnim, footerPose, narrowHomePose, poseFor, processPose, risePose, rolePose, scrollPose, standPose, type ScrollPose } from "./poses";
 import { roleTrip } from "@/lib/role-trip";
 import { pointer } from "./pointer";
 import AvatarRig, { type Seat } from "./AvatarRig";
@@ -361,9 +361,15 @@ export default function Avatar({ pathname }: { pathname: string }) {
     const g = root.current;
     if (!g) return;
     const { viewport } = state;
+    // portrait screens (phones and portrait tablets) and phones (the
+    // page's own phone layout, below the md breakpoint)
     const mobile = viewport.aspect < 0.8;
+    const phone = window.innerWidth < 768;
     const { section, footer, dance } = sceneStore.get();
-    const pose = poseFor(pathname, section, mobile, footer);
+    const home = (pathname.replace(/\/$/, "") || "/") === "/";
+    // the home page keeps its scenes on portrait screens too (like the
+    // reference); other pages put him in a corner there
+    const pose = (home && mobile && !footer && narrowHomePose(section, phone)) || poseFor(pathname, section, mobile, footer);
     anim.current = animFor(pathname, section, footer, dance);
     // which seat props to show: the open hand ("rock" spot) in the hero, desk in the "desk" section
     const path = pathname.replace(/\/$/, "") || "/";
@@ -388,7 +394,7 @@ export default function Avatar({ pathname }: { pathname: string }) {
     let tz = 0;
     const ts = (pose.s * viewport.height) / 5;
     // Scroll-driven sections (work, clients): the scroll position inside the
-    // section moves the character; phones keep him in the corner instead.
+    // section moves the character (phones too, smaller and placed for them).
     let scrubbed: ScrollPose | null = null;
     if (!footer && path === "/" && section === "name") {
       // the name section is pinned: its own scroll progress drives him
@@ -403,27 +409,43 @@ export default function Avatar({ pathname }: { pathname: string }) {
     if (!footer && path === "/" && (section === "role" || section === "band")) {
       scrubbed = rolePose(roleTrip.p, roleTrip.out, roleTrip.shift, mobile);
     }
-    if (!mobile && !footer && path === "/" && section === "work") {
-      // the pinned intro (circle + title) sets the pace, not the whole section
+    if (!footer && path === "/" && section === "work") {
+      // the pinned intro (circle + title) sets the pace, not the whole section;
+      // he dives just under the middle of the WORK title
       const el = document.querySelector<HTMLElement>("[data-work-intro]");
+      const title = document.querySelector<HTMLElement>("[data-work-title]")?.getBoundingClientRect();
+      const mid = title && title.height > 0 ? Math.min(0.5, Math.max(0.15, (title.top + title.height / 2) / innerHeight)) : 0.3;
       if (el) {
         const r = el.getBoundingClientRect();
-        scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight));
+        // (the title's spot once pinned; while the intro is still coming in
+        // it is lower, so use where it will be)
+        const pinned = r.top < 0 ? mid : 0.3;
+        scrubbed = scrollPose(section, (innerHeight - r.top) / (r.height + innerHeight), pinned, phone ? 0.62 : 1.0);
       }
     }
     // clients -> services: he follows the bottom edge of the dark clients
     // section (walk, trip, tumble over it, hang upside down at the top-left);
     // showcase: up and away; process: in at step 03 only (poses.ts)
-    if (!mobile && !footer && path === "/" && (section === "clients" || section === "services")) {
+    if (!footer && path === "/" && (section === "clients" || section === "services")) {
       const el = document.querySelector<HTMLElement>('[data-pose="clients"]');
-      if (el) scrubbed = edgePose(el.getBoundingClientRect().bottom / innerHeight, state.clock.elapsedTime);
+      if (el) scrubbed = edgePose(el.getBoundingClientRect().bottom / innerHeight, state.clock.elapsedTime, phone);
+      // phones have no side column for him: after hanging there for a while,
+      // as the services list goes up under him, he lets go upwards and is gone
+      const first = phone && section === "services" ? document.querySelector<HTMLElement>("[data-service]") : null;
+      if (first) {
+        const top = first.getBoundingClientRect().top / innerHeight;
+        if (top < 0.3) scrubbed = risePose(top + 0.2, true);
+      }
     }
-    if (!mobile && !footer && path === "/" && section === "brand") {
+    if (!footer && path === "/" && section === "brand") {
       const el = document.querySelector<HTMLElement>('[data-pose="brand"]');
-      if (el) scrubbed = risePose(el.getBoundingClientRect().top / innerHeight);
+      // (phones: already gone)
+      if (el) scrubbed = risePose(phone ? -1 : el.getBoundingClientRect().top / innerHeight, phone);
     }
-    if (!mobile && !footer && path === "/" && section === "process") {
-      const el = document.querySelectorAll<HTMLElement>('[data-pose="process"] [data-step]')[2];
+    if (!footer && path === "/" && section === "process") {
+      // (portrait screens: the step's text is where he would stand, so he
+      // waits out of sight)
+      const el = mobile ? null : document.querySelectorAll<HTMLElement>('[data-pose="process"] [data-step]')[2];
       scrubbed = processPose(el ? el.getBoundingClientRect().top / innerHeight : null);
     }
     // footer (every page): standing on the right, rising with the footer;
@@ -439,7 +461,25 @@ export default function Avatar({ pathname }: { pathname: string }) {
     // (the playground's dance always wins)
     const dancing = path === "/playground" && dance.active;
     if (footer && !dancing) anim.current = footerAnim(since);
-    if (!mobile && foot) scrubbed = { ...footerPose(footBottom, since), ...(dancing ? { anim: undefined } : {}) };
+    // Phones, other pages (like the reference): not in a corner over the
+    // text; he stands on the page's [data-avatar-stand] if it has one (contact:
+    // on the big "Say hi"), dances in the middle of the playground, and is
+    // otherwise out of sight until the footer.
+    if (phone && !home && !footer && path !== "/playground") {
+      const st = document.querySelector<HTMLElement>("[data-avatar-stand]");
+      const r = st?.getBoundingClientRect();
+      scrubbed =
+        st && r
+          ? standPose(((r.left + r.width / 2) / innerWidth) * 2 - 1, r.bottom / innerHeight, Number(st.dataset.standS || 0.45), 0, anim.current)
+          : { ...processPose(null), anim: anim.current };
+    }
+    // (phones: small, standing to the right of the footer's social links,
+    // where there is room, like the reference)
+    if (foot && !phone) scrubbed = { ...footerPose(footBottom, since, mobile), ...(dancing ? { anim: undefined } : {}) };
+    else if (foot) {
+      const col = document.querySelector<HTMLElement>("[data-footer-stand]");
+      scrubbed = col ? standPose(0.7, col.getBoundingClientRect().bottom / innerHeight, 0.5, -0.3, anim.current) : { ...processPose(null), anim: anim.current };
+    }
     if (scrubbed && section !== "name") {
       tx = (scrubbed.x * viewport.width) / 2;
       ty = (scrubbed.y * viewport.height) / 2;

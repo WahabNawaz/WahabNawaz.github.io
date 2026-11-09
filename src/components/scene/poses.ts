@@ -61,8 +61,25 @@ const FALLBACK: Pose = { x: 0.0, y: -0.3, ry: 0.0, s: 0.85 };
 
 // Phones: the character stays small in a corner so it never covers text.
 const MOBILE_CORNER: Pose = { x: 0.62, y: -0.78, ry: -0.5, s: 0.3 };
-// between the headline and the buttons
-const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.5, s: 0.56 };
+// sitting on the hand's finger, big (the spot comes from the hand)
+const MOBILE_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.5, s: 1.15 };
+const TABLET_HERO: Pose = { x: 0.0, y: -0.3, ry: 0.55, s: 1.25 };
+
+/**
+ * Home page on portrait screens (phones and portrait tablets): the same scenes
+ * as on desktop (the scroll-driven ones are moved by scrollPose, rolePose,
+ * edgePose, ... with `phone` set), only the resting spots change so he stays
+ * clear of the text. null = use poseFor.
+ */
+export function narrowHomePose(section: string | null, phone: boolean): Pose | null {
+  if (section === "hero" || !section) return phone ? MOBILE_HERO : TABLET_HERO;
+  if (section === "name") return { ...NAMED.name, s: phone ? 0.62 : 0.72 };
+  // the desk and chair: bottom-right under the testimonial on phones, lower
+  // left on tablets
+  if (section === "desk") return phone ? { x: 0.5, y: -0.8, ry: 0.8, s: 0.36 } : { x: -0.34, y: -0.44, ry: 0.8, s: 0.8 };
+  if (NAMED[section]) return NAMED[section];
+  return null;
+}
 
 // Footer text sits on the left, so the character stands on the right, big,
 // feet near the bottom of the screen (like the reference; footerPose below).
@@ -134,7 +151,7 @@ export function animFor(
  */
 export type ScrollPose = Pose & { roll: number; anim?: AnimState; hide?: boolean; dangle?: number };
 
-export function scrollPose(section: string | null, p: number): ScrollPose | null {
+export function scrollPose(section: string | null, p: number, title = 0.3, size = 1.0): ScrollPose | null {
   const c = Math.min(1, Math.max(0, p));
   if (section === "name") {
     // walks off to the left, comes back pushing the floating desk across while
@@ -148,12 +165,14 @@ export function scrollPose(section: string | null, p: number): ScrollPose | null
     return { x: 0.38 + k * 0.9, y: -0.3 - k * k * 1.2, ry: 1.0, s: 0.78, roll: -k * 0.6, anim: "jump" };
   }
   if (section === "work") {
-    if (c < 0.42) return { x: -1.6, y: 0.3, ry: 1.25, s: 1.0, roll: -1.25, anim: "jump", hide: true };
+    // a little below the middle of the title (desktop: y 0.26)
+    const y0 = 1 - 2 * (title + 0.07);
+    if (c < 0.42) return { x: -1.6, y: y0 + 0.04, ry: 1.25, s: size, roll: -1.25, anim: "jump", hide: true };
     if (c < 0.64) {
       const k = (c - 0.42) / 0.22;
-      return { x: -1.45 + k * 3.0, y: 0.26 + Math.sin(k * Math.PI) * 0.14, ry: 1.25, s: 1.0, roll: -1.2 - k * 0.4, anim: "jump" };
+      return { x: -1.45 + k * 3.0, y: y0 + Math.sin(k * Math.PI) * 0.14, ry: 1.25, s: size, roll: -1.2 - k * 0.4, anim: "jump" };
     }
-    return { x: 1.8, y: 0.3, ry: 1.25, s: 1.0, roll: -1.6, anim: "jump", hide: true };
+    return { x: 1.8, y: y0 + 0.04, ry: 1.25, s: size, roll: -1.6, anim: "jump", hide: true };
   }
   return null;
 }
@@ -164,6 +183,9 @@ const smooth = (k: number) => k * k * (3 - 2 * k);
 const yAt = (frac: number) => 1 - 2 * frac;
 // hanging upside down from the top-left, just under the header strip
 const HANG = { x: -0.72, hips: -0.06, ry: 0.4, s: 1.2, roll: 2.8 };
+// phones: smaller, and (mirrored) at the top right, clear of the heading
+const HANG_PHONE = { x: -0.55, hips: -0.04, ry: 0.4, s: 0.8, roll: 2.8 };
+const mirror = (p: ScrollPose, phone: boolean): ScrollPose => (phone ? { ...p, x: -p.x, ry: -p.ry, roll: -p.roll } : p);
 
 /**
  * Clients -> services, like the reference. `edge` is where the bottom edge
@@ -172,41 +194,50 @@ const HANG = { x: -0.72, hips: -0.06, ry: 0.4, s: 1.2, roll: 2.8 };
  * edge ("Oops!"), tumbles over it as the white services section scrolls up,
  * and ends up hanging upside down from the top-left, arms dangling.
  */
-export function edgePose(edge: number, t: number): ScrollPose {
-  if (edge > 1.85) return { x: 1.2, y: yAt(0.5), ry: -0.55, s: 1.15, roll: 0, anim: "walk", hide: true };
+export function edgePose(edge: number, t: number, phone = false): ScrollPose {
+  return mirror(edgeSide(edge, t, phone), phone);
+}
+function edgeSide(edge: number, t: number, phone: boolean): ScrollPose {
+  const H = phone ? HANG_PHONE : HANG;
+  const S = phone ? 0.8 : 1.15;
+  const off = 0.26 * S; // hips above the edge when his feet are on it
+  // (phones: he comes in once the heading has gone up past him)
+  const start = phone ? 1.3 : 1.85;
+  if (edge > start) return { x: 1.2, y: yAt(0.5), ry: -0.55, s: S, roll: 0, anim: "walk", hide: true };
   if (edge > 0.8) {
-    const k = (1.85 - edge) / 1.05;
-    return { x: mix(1.15, 0.1, k), y: yAt(0.5), ry: -0.55, s: 1.15, roll: 0, anim: "walk" };
+    const k = (start - edge) / (start - 0.8);
+    return { x: mix(1.15, 0.1, k), y: yAt(0.5), ry: -0.55, s: S, roll: 0, anim: "walk" };
   }
   if (edge > 0.65) {
     // the stumble: the edge has reached his feet
     const k = (0.8 - edge) / 0.15;
-    return { x: mix(0.1, 0.02, k), y: yAt(edge - 0.3), ry: mix(-0.55, -0.9, k), s: 1.15, roll: k * 0.5, anim: "jump" };
+    return { x: mix(0.1, 0.02, k), y: yAt(edge - off), ry: mix(-0.55, -0.9, k), s: S, roll: k * 0.5, anim: "jump" };
   }
   if (edge > 0.16) {
     // over the edge, head first, turning upside down on the way up
     const k = smooth((0.65 - edge) / 0.49);
     return {
-      x: mix(0.02, HANG.x, k),
-      y: yAt(edge - 0.3 + k * 0.08),
-      ry: mix(-0.9, HANG.ry, k),
-      s: mix(1.15, HANG.s, k),
-      roll: mix(0.5, HANG.roll, k),
+      x: mix(0.02, H.x, k),
+      y: yAt(edge - off + k * 0.08),
+      ry: mix(-0.9, H.ry, k),
+      s: mix(S, H.s, k),
+      roll: mix(0.5, H.roll, k),
       anim: "jump",
       dangle: k,
     };
   }
-  return { x: HANG.x, y: yAt(HANG.hips), ry: HANG.ry, s: HANG.s, roll: HANG.roll + Math.sin(t * 1.2) * 0.05, anim: "idle", dangle: 1 };
+  return { x: H.x, y: yAt(H.hips), ry: H.ry, s: H.s, roll: H.roll + Math.sin(t * 1.2) * 0.05, anim: "idle", dangle: 1 };
 }
 
 /**
  * Showcase after the services: he lets go upwards and is gone. `top` = the
  * showcase's top edge on screen (0..1 from the top).
  */
-export function risePose(top: number): ScrollPose {
+export function risePose(top: number, phone = false): ScrollPose {
+  const H = phone ? HANG_PHONE : HANG;
   const k = Math.min(1, Math.max(0, (0.5 - top) / 0.5));
   const hidden = top < 0;
-  return { x: HANG.x, y: yAt(HANG.hips - k * 0.5), ry: HANG.ry, s: HANG.s, roll: HANG.roll, anim: "idle", dangle: 1, hide: hidden };
+  return mirror({ x: H.x, y: yAt(H.hips - k * 0.5), ry: H.ry, s: H.s, roll: H.roll, anim: "idle", dangle: 1, hide: hidden }, phone);
 }
 
 // Measured on screen: the pose point is at his hips; at size s the soles are
@@ -278,6 +309,15 @@ export function processPose(top: number | null): ScrollPose {
   return { ...pose, anim: top > 0.33 || top < -0.3 ? "jump" : "idle" };
 }
 
+/**
+ * Standing with his soles at `soles` (0..1 from the top of the screen) and
+ * his middle at `x` (-1..1); not drawn while he is off the screen.
+ */
+export function standPose(x: number, soles: number, s: number, ry: number, anim: AnimState): ScrollPose {
+  const hips = soles - LEGS * s;
+  return { x, y: yAt(hips), ry, s, roll: 0, anim, hide: hips - TORSO * s > 1.02 || soles < -0.02 };
+}
+
 // In the footer he greets, then stands and chats, round and round:
 // wave, stand, talk, stand (seconds since the footer came on screen).
 export function footerAnim(since: number): AnimState {
@@ -290,6 +330,7 @@ export function footerAnim(since: number): AnimState {
  * he rises with the footer as it scrolls in (`bottom` = the footer's bottom
  * edge on screen, 0..1 from the top). `since` = seconds the footer has been on.
  */
-export function footerPose(bottom: number, since: number): ScrollPose {
-  return { ...FOOT, y: yAt(bottom - 0.017 - LEGS * FOOT.s), roll: 0, anim: footerAnim(since) };
+export function footerPose(bottom: number, since: number, narrow = false): ScrollPose {
+  // (portrait tablets: a little in from the edge, so his waving arm stays on screen)
+  return { ...FOOT, x: narrow ? 0.6 : FOOT.x, y: yAt(bottom - 0.017 - LEGS * FOOT.s), roll: 0, anim: footerAnim(since) };
 }

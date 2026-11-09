@@ -96,7 +96,9 @@ const fragmentShader = /* glsl */ `
 
     // cumulus: fbm with a gentle domain warp, drifting slowly; flattened a
     // little vertically so the clouds sit in soft horizontal banks
-    vec2 p = vec2(uv.x * aspect, uv.y * 1.35) * 2.1 + uPointer * 0.05 + vec2(t * 0.012, 0.0);
+    // (a screen narrower than 16:10 shows the right-hand part of the wide sky,
+    // where the clouds are, instead of the clear left side)
+    vec2 p = vec2(uv.x * aspect + max(0.0, 1.6 - aspect), uv.y * 1.35) * 2.1 + uPointer * 0.05 + vec2(t * 0.012, 0.0);
     vec2 q = vec2(fbm(p * 0.6 + vec2(0.0, t * 0.006)), fbm(p * 0.6 + vec2(5.2, 1.3)));
     vec2 r = q;
     float f = fbm(p + 0.9 * q);

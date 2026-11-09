@@ -11,15 +11,19 @@ export const metadata: Metadata = {
 };
 
 // Big bouncing "Say hi", then the contact form on the left and direct
-// contact details on the right. The 3D character waves from the right.
+// contact details on the right. The 3D character waves from the right (on
+// phones he stands on the "Say hi").
 export default function ContactPage() {
   return (
     <section className="px-5 pb-24 pt-32 md:px-8">
       <Label>{site.status}</Label>
-      <BouncyLetters
-        text="Say hi"
-        className="mt-4 text-center font-display text-[22vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[17vw]"
-      />
+      {/* on phones the character stands on it, between the two words */}
+      <div data-avatar-stand data-stand-s="0.42">
+        <BouncyLetters
+          text="Say hi"
+          className="mt-4 text-center font-display text-[22vw] font-semibold uppercase leading-[0.8] tracking-tighter md:text-[17vw]"
+        />
+      </div>
 
       <div className="mt-20 grid gap-16 md:grid-cols-[1.2fr_1fr] md:pr-[18%]">
         <div>

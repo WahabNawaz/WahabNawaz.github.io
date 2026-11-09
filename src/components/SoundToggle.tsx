@@ -57,12 +57,12 @@ export default function SoundToggle() {
       onClick={() => sound.set(!on)}
       aria-pressed={on}
       aria-label={on ? "Sound on" : "Sound off"}
-      className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest"
+      className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-widest"
     >
-      <span className="hidden sm:inline">Sound</span>
-      <span ref={bars} className="flex h-3 items-end gap-[2px]" aria-hidden>
+      <span className="hidden min-[375px]:inline">Sound</span>
+      <span ref={bars} className="flex h-[18px] items-center gap-[3px]" aria-hidden>
         {[0, 1, 2, 3].map((i) => (
-          <span key={i} data-bar className="block h-full w-[2px] origin-bottom scale-y-[0.2] bg-current" />
+          <span key={i} data-bar className="block h-full w-[3px] origin-center scale-y-[0.2] bg-current" />
         ))}
       </span>
     </button>

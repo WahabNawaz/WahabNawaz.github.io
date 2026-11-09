@@ -294,9 +294,24 @@ function useHand(side: "left" | "right") {
   return useMemo(() => buildRig(scene, side === "left" ? 7 : 3), [scene, side]);
 }
 
-/** Both hands: wrist to fingertip as a share of the screen height. */
+/**
+ * Both hands: wrist to fingertip as a share of the screen height; on narrow
+ * screens at most 3/4 of the width (like the reference, where the character
+ * is big and the hands come in from the screen edges).
+ */
 const HAND_LEN = 0.76;
-const handLength = (w: number, h: number) => Math.min(h * HAND_LEN, w * 1.05); // phones: stay on screen
+const handLength = (w: number, h: number) => Math.min(h * HAND_LEN, w * (w / h < 0.6 ? 0.8 : 0.75));
+/**
+ * Where the wrists go, by screen shape: phones (tall), portrait tablets and
+ * wide screens. On portrait screens the seat hand's wrist is off the left edge
+ * (only the fingers show, the character sits near the middle) and the reaching
+ * hand comes in from the top right, next to the end of the headline.
+ */
+const shape = (aspect: number) => (aspect < 0.6 ? 0 : aspect < 0.8 ? 1 : 2);
+const SEAT_X = [0.06, 0.08, 0.1]; // seat hand wrist, from the left edge (share of the width)
+const SEAT_LIFT = [0.31, 0.3, 0.27]; // seat hand wrist, from the bottom (share of the height)
+const REACH_X = [0.28, 0.26, 0]; // reaching hand, further right than on wide screens (share of the width)
+const REACH_TOP = [0.06, 0.03, 0.12]; // reaching hand wrist, from the top (share of the height)
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -369,8 +384,8 @@ export function SeatHand() {
     const h = viewport.height;
     const w = viewport.width;
     const L = handLength(w, h);
-    const lift = viewport.aspect < 0.8 ? 0.36 : 0.27; // phones: clear of the sky switch
-    const x1 = -w / 2 + w * 0.1;
+    const lift = SEAT_LIFT[shape(viewport.aspect)];
+    const x1 = -w / 2 + w * SEAT_X[shape(viewport.aspect)];
     const y1 = -h / 2 + h * lift - (1 - r) * h * 0.7;
     if (!tip.current) {
       g.scale.setScalar(L);
@@ -429,15 +444,14 @@ export function ReachingHand() {
     if (!g || !a) return;
     const t = clock.elapsedTime;
     const { section } = sceneStore.get();
-    const wide = viewport.aspect >= 0.8;
     const onHero = section === "hero";
     // flies in with the other hand (SeatHand runs the opening)
     const fly = opening.k < 0 && isIntroDone() && !opening.done ? 0 : flyIn();
-    const target = wide && onHero && fly >= 0 ? 1 : 0;
+    const target = onHero && fly >= 0 ? 1 : 0;
     if (fly >= 0 && fly < 1) shown.current = 1;
     else shown.current += (target - shown.current) * (1 - Math.exp(-dt * (target ? 1.4 : 4)));
     const s = shown.current;
-    g.visible = s > 0.005 && fly >= 0 && wide;
+    g.visible = s > 0.005 && fly >= 0;
     const state = s > 0.5 ? "shown" : "hidden";
     if (document.documentElement.dataset.hands !== state) document.documentElement.dataset.hands = state;
     if (!g.visible) return;
@@ -450,8 +464,9 @@ export function ReachingHand() {
     // in along its own arm
     const L = handLength(w, h);
     const back = (1 - s) * h * 0.8;
-    const x1 = w / 2 + h * 0.02 + back * Math.cos(TILT) + pointer.x * 0.12;
-    const y1 = h / 2 - h * 0.12 + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08;
+    const sh = shape(viewport.aspect);
+    const x1 = w / 2 + w * REACH_X[sh] + h * 0.02 + back * Math.cos(TILT) + pointer.x * 0.12;
+    const y1 = h / 2 - h * REACH_TOP[sh] + back * Math.sin(TILT) + Math.sin(t * 0.6) * h * 0.008 + pointer.y * 0.08;
     if (!tip.current) {
       g.scale.setScalar(L);
       g.position.set(x1, y1, 0.5);
